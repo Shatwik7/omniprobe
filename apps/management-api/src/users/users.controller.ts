@@ -1,25 +1,48 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Logger, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { AuthService } from '../auth/auth.service';
+import { SignUpDto } from '../auth/dto/signup.dto';
+import { User } from '@app/database';
+import { SignInDto } from '../auth/dto/sign-in.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { LocalAuthGuard } from '../auth/guards/local-auth.guard';
+import { SignInDtoResponse } from '../auth/dto/sign-in-response.dto';
 
-@Controller('users')
+@Controller()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  private logger=new Logger();
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly authService:AuthService,
+  ) {}
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+
+
+  @Post('/signup')
+  create(@Body() createUserDto: SignUpDto):Promise<Partial<User>> {
+    this.logger.log(createUserDto);
+    return this.authService.register(createUserDto);
   }
 
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
+
+  @Post('/signin')
+  @UseGuards(LocalAuthGuard)
+  login(@Request() req: { user: User }): SignInDtoResponse {
+    const res:SignInDtoResponse=this.authService.createAccessToken(req.user);
+    return res;
+  }
+
+
+  @Get('/me')
+  @UseGuards(JwtAuthGuard)
+  findAll(@Request() req) {
+    return this.usersService.findOne(req.user.id);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+    return this.usersService.findOne(id);
   }
 
   @Patch(':id')

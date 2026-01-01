@@ -8,10 +8,12 @@ import { AlertPolicy } from './entity/alert-policy.entity';
 import { Incident } from './entity/incident.entity';
 import { Metric } from './entity/metric.entity';
 import { Monitor } from './entity/monitor.entity';
+import { Notification } from './entity/notification.entity';
 
 @Module({
   imports: [
      TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
@@ -26,5 +28,6 @@ import { Monitor } from './entity/monitor.entity';
     }),
     TypeOrmModule.forFeature([User, Team, Project, AlertPolicy, Incident, Metric, Monitor, Notification])
   ],
+  exports: [TypeOrmModule]
 })
 export class DatabaseModule {}

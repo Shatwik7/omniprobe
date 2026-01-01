@@ -13,10 +13,11 @@ require("esbuild")
     "mqtt",
     "ioredis",
     "amqplib",
-    "amqp-connection-manager"
+    "amqp-connection-manager",
+    "class-transformer/storage",
+    "argon2"
   ],
 })
-.then(()=>console.log("BUILD SUCCESS"))
 .catch((x) => {
   console.error("ESBUILD ERROR: 'FAILED TO CREATE BUILD FILE'");
   console.error(x);
