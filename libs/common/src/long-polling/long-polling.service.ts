@@ -30,7 +30,7 @@ export class LongPollingService implements OnModuleDestroy {
       try {
         const data = JSON.parse(message);
         this.resolveLocalObservers(monitorId, data);
-      } catch (err) {
+      } catch (err: any) {
         this.logger.error(`Error parsing Redis message: ${err.message}`);
       }
     });

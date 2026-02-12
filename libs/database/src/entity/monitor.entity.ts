@@ -33,8 +33,14 @@ export class Monitor {
 
   //MONITORING TASK ACTIVE
   @Column({ default: true })
+  @ApiProperty()
   isActive: boolean;
 
+  //Maintenence Window
+  // [{"start": time,"end":time},{"start":time,"end":time}]....
+  @ApiProperty()
+  @Column({ type: 'jsonb', nullable: true })
+  maintencePeriods: Record<string, any>[];
 
 
   // "Project has Multiple Monitors"

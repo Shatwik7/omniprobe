@@ -14,13 +14,23 @@ export class AlertPolicy {
 
   // Configuration for thresholds (e.g., { "cpu_threshold": 80, "timeout_ms": 5000 })
   @ApiProperty()
-  @Column({ type: 'jsonb', default: {} })
+  @Column({
+    type: 'jsonb', default: {
+      "cpu_threshold": 80,
+      "timeout_ms": 30000,
+      "maintence_periods": [{
+        "start": 0,
+        "end": 0
+      }],
+      
+    } 
+  })
   rules: Record<string, any>;
 
-  // Channels can be linked here (Slack, Email, etc.) - Simplified for brevity
+  // Channels can be linked here (Slack, Email, Phone etc.) - Simplified for brevity
   @ApiProperty()
   @Column({ type: 'jsonb', nullable: true })
-  notificationChannels: string[];
+  notificationChannels: Record<string, any>;
 
   // "Each Monitor Can Have A Alert Policy" -> Inverse side
   @ApiProperty()

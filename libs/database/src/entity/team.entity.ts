@@ -1,11 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, ManyToMany, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  ManyToMany,
+  OneToMany,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { User } from './user.entity';
 import { Project } from './project.entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 
 @Entity('teams')
 export class Team {
-
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -14,19 +23,19 @@ export class Team {
   @Column()
   name: string;
 
-  // "Created By User"
-  @ApiProperty()
+  // Created by user
+  @ApiHideProperty()
   @ManyToOne(() => User, (user) => user.createdTeams)
   @JoinColumn({ name: 'created_by' })
   createdBy: User;
 
-  // "User Can be Belong to Multiple Team" (Inverse side)
-  @ApiProperty()
+  // Members (HIDE to avoid circular ref)
+  @ApiHideProperty()
   @ManyToMany(() => User, (user) => user.teams)
   members: User[];
 
-  // "Multiple Projects In Team"
-  @ApiProperty()
+  // Projects (HIDE to avoid circular ref)
+  @ApiHideProperty()
   @OneToMany(() => Project, (project) => project.team)
   projects: Project[];
 

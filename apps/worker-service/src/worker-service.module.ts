@@ -1,11 +1,25 @@
-import { Module } from '@nestjs/common';
-import { WorkerServiceController } from './worker-service.controller';
-import { WorkerServiceService } from './worker-service.service';
-import { WorkerModule } from './worker/worker.module';
+import { Logger, Module } from '@nestjs/common';
+import { WorkerController } from './worker-service.controller';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { CheckExecutorService } from './checkExecutor.service';
+import { CheckExecutionEventProducerService } from './KafkaProducer.service';
 
 @Module({
-  imports: [WorkerModule],
-  controllers: [WorkerServiceController],
-  providers: [WorkerServiceService],
+  imports: [
+    ClientsModule.register([
+      {
+        name: 'KAFKA_PRODUCER',
+        transport: Transport.KAFKA,
+        options: {
+          client: {
+            clientId: 'scheduler-producer',
+            brokers: ['localhost:9092'],
+          },
+        },
+      },
+    ]),
+  ],
+  controllers: [WorkerController],
+  providers: [CheckExecutorService, CheckExecutionEventProducerService],
 })
 export class WorkerServiceModule {}

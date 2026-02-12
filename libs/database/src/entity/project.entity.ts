@@ -1,7 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Team } from './team.entity';
 import { Monitor } from './monitor.entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 
 @Entity('projects')
 export class Project {
@@ -17,20 +26,16 @@ export class Project {
   @Column({ nullable: true })
   description: string;
 
-  // "Multiple Projects In Team"
-  @ApiProperty()
+  // Team owning this project (HIDE)
+  @ApiHideProperty()
   @ManyToOne(() => Team, (team) => team.projects, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'team_id' })
   team: Team;
 
-  // "Project has Multiple Monitors"
-  @ApiProperty()
+  // Monitors
+  @ApiHideProperty()
   @OneToMany(() => Monitor, (monitor) => monitor.project)
   monitors: Monitor[];
-  
-//   // Example: SLA Reports might be aggregated at the Project level
-//   @OneToMany(() => SlaReport, (report) => report.project)
-//   slaReports: SlaReport[];
 
   @ApiProperty()
   @CreateDateColumn()

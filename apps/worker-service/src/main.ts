@@ -1,8 +1,23 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { NestFactory } from '@nestjs/core';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { WorkerServiceModule } from './worker-service.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(WorkerServiceModule);
-  await app.listen(process.env.port ?? 3000);
+
+  const app = await NestFactory.createMicroservice<MicroserviceOptions>(WorkerServiceModule, {
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        brokers: [process.env.KAFKA_URL || 'localhost:9092'], // Use 'kafka:9092' if running inside Docker
+      },
+      consumer: {
+        groupId: 'monitoring-worker-group',
+      },
+    },
+  });
+  await app.listen();
 }
 bootstrap();

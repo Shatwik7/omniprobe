@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
 import { Monitor } from './monitor.entity';
 import { Notification } from './notification.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { User } from './user.entity';
 
 export enum IncidentStatus {
   OPEN = 'OPEN',
@@ -33,8 +34,17 @@ export class Incident {
   summary: string;
 
   @ApiProperty()
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp',nullable: true })
   resolvedAt: Date;
+
+  @ApiProperty()
+  @Column({type:"timestamp", nullable:true})
+  acknowledgedAt: Date;
+
+  @ApiProperty({ required: false})
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'acknowledged_by' })
+  acknowledgedBy: User;
 
   @ApiProperty()
   @ManyToOne(() => Monitor, (monitor) => monitor.incidents)
