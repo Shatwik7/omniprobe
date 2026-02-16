@@ -1,0 +1,122 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { CacheService } from './Cache.service';
+import { Monitor } from '@app/database';
+import { describe, it, expect, afterAll, beforeAll } from '@jest/globals';
+
+
+/**
+ * NOTE: This is an integration test that connects to a real Redis instance.
+ * Make sure Redis is running locally on the default port (6379) before executing.
+ * You can start Redis using Docker: `docker run -p 6379:6379 redis`
+ * 
+ * This test verifies that the CacheService can set and get a Monitor object correctly.
+ * It uses the setMonitor/getMonitor methods which handle JSON serialization.
+ * After the test, it cleans up by deleting the test key from Redis.
+ */
+describe('CacheService (Integration)', () => {
+    let service: CacheService;
+    let module: TestingModule; // Store module reference
+
+    beforeAll(async () => {
+        module = await Test.createTestingModule({
+            providers: [CacheService],
+        }).compile();
+
+        service = module.get<CacheService>(CacheService);
+    });
+
+    // THIS IS THE CRITICAL STEP TO STOP THE HANGING
+    afterAll(async () => {
+        if (module) {
+            await module.close();
+        }
+    });
+
+    it('should be defined', () => {
+        expect(service).toBeDefined();
+    });;
+
+    describe('setMonitor / getMonitor', () => {
+        it('should set and get a value in real Redis', async () => {
+            const monitor: Monitor = new Monitor();
+            monitor.id = '1';
+            monitor.name = 'Test Monitor';
+            monitor.target = 'http://example.com';
+            monitor.method = 'GET';
+            monitor.frequencySeconds = 60;
+            monitor.headers = { 'Content-Type': 'application/json' };
+            monitor.body = '';
+
+            await service.setMonitor(monitor);
+
+            const data = await service.getMonitor('1');
+
+            expect(data).toBeDefined();
+            expect(data?.id).toBe(monitor.id);
+            expect(data?.name).toBe(monitor.name);
+
+            await service.deleteMonitor('1');
+        });
+
+        it('should return null for non-existent key', async () => {
+            const data = await service.getMonitor('non-existent-id');
+            expect(data).toBeNull();
+        });
+
+        it('should delete a monitor', async () => {
+            const monitor: Monitor = new Monitor();
+            monitor.id = '2';
+            monitor.name = 'To Be Deleted';
+            monitor.target = 'http://example.com';
+            monitor.method = 'GET';
+            monitor.frequencySeconds = 60;
+            monitor.headers = { 'Content-Type': 'application/json' };
+            monitor.body = '';
+
+            await service.setMonitor(monitor);
+            await service.deleteMonitor('2');
+
+            const data = await service.getMonitor('2');
+            expect(data).toBeNull();
+        });
+
+        it('should handle multiple monitors', async () => {
+            const monitor1: Monitor = new Monitor();
+            monitor1.id = '3';
+            monitor1.name = 'Monitor 3';
+            monitor1.target = 'http://example.com/3';
+            monitor1.method = 'GET';
+            monitor1.frequencySeconds = 60;
+            monitor1.headers = { 'Content-Type': 'application/json' };
+            monitor1.body = '';
+
+            const monitor2: Monitor = new Monitor();
+            monitor2.id = '4';
+            monitor2.name = 'Monitor 4';
+            monitor2.target = 'http://example.com/4';
+            monitor2.method = 'POST';
+            monitor2.frequencySeconds = 120;
+            monitor2.headers = { 'Content-Type': 'application/json' };
+            monitor2.body = JSON.stringify({ key: 'value' });
+
+            await service.setMonitor(monitor1);
+            await service.setMonitor(monitor2);
+
+            const data1 = await service.getMonitor('3');
+            const data2 = await service.getMonitor('4');
+
+            expect(data1).toBeDefined();
+            expect(data1?.id).toBe(monitor1.id);
+            expect(data1?.name).toBe(monitor1.name);
+
+            expect(data2).toBeDefined();
+            expect(data2?.id).toBe(monitor2.id);
+            expect(data2?.name).toBe(monitor2.name);
+
+            // Cleanup
+            await service.deleteMonitor('3');
+            await service.deleteMonitor('4');
+        });
+
+    });
+});
