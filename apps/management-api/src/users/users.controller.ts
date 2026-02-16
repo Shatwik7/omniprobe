@@ -1,10 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Logger, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Logger, Request, ParseUUIDPipe, Query, ParseIntPipe, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthService } from '../auth/auth.service';
 import { SignUpDto } from '../auth/dto/signup.dto';
 import { User } from '@app/database';
-import { SignInDto } from '../auth/dto/sign-in.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { LocalAuthGuard } from '../auth/guards/local-auth.guard';
 import { SignInDtoResponse } from '../auth/dto/sign-in-response.dto';
@@ -33,25 +32,32 @@ export class UsersController {
     return res;
   }
 
+  @Get()
+  findAll(@Request() req, @Query('take',ParseIntPipe) take:number=10, @Query('skip',ParseIntPipe) skip:number=0){
+    if(take>100){
+      throw new ForbiddenException();
+    }
+    return this.usersService.findAll(req.query.page,req.query.limit);
+  }
 
   @Get('/me')
   @UseGuards(JwtAuthGuard)
-  findAll(@Request() req) {
+  findme(@Request() req) {
     return this.usersService.findOne(req.user.id);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id',ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+  update(@Param('id',ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(+id, updateUserDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  remove(@Param('id',ParseUUIDPipe) id: string) {
+    return this.usersService.remove(id);
   }
 }

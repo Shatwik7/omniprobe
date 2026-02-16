@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Repository } from 'typeorm';
 import { User } from '@app/database';
@@ -10,12 +9,11 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {
+  ) {}
 
-  }
-
-  findAll() {
-    return `This action returns all users`;
+  findAll(page:number, limit: number) {
+    const users=this.usersRepository.find({relations:["createdTeams","teams"],skip:page*limit,take:limit});
+    return ;
   }
 
   findOne(id: string) {
@@ -27,7 +25,8 @@ export class UsersService {
     return `This action updates a #${id} user`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async remove(id: string) :Promise<Boolean>{
+    const user=await this.usersRepository.delete({id:id});
+    return user.affected!=null && user.affected > 0 ? true : false;
   }
 }

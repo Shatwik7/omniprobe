@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { IncidentsService } from './incidents.service';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
@@ -18,14 +18,14 @@ export class IncidentsController {
 
   @Get()
   @UseGuards(TeamMemberGuard)
-  findAll() {
-    return this.incidentsService.findAll();
+  findAll(@Param('monitorId',ParseUUIDPipe) monitorId: string){
+    return this.incidentsService.findAll(monitorId);
   }
 
   @Get(':id')
   @UseGuards(TeamMemberGuard)
-  findOne(@Param('id') id: string) {
-    return this.incidentsService.findOne(+id);
+  findOne(@Param('id',ParseUUIDPipe) id: string) {
+    return this.incidentsService.findOne(id);
   }
 
   @Patch(':id')
@@ -36,7 +36,7 @@ export class IncidentsController {
 
   @Delete(':id')
   @UseGuards(TeamMemberGuard)
-  remove(@Param('id') id: string) {
-    return this.incidentsService.remove(+id);
+  remove(@Param('id',ParseUUIDPipe) id: string) {
+    return this.incidentsService.remove(id);
   }
 }

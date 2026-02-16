@@ -1,9 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('notifications')
+@Controller('teams/:teamId/projects/:projectId/notifications')
+@UseGuards(JwtAuthGuard,TeamMemberGuard)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

@@ -1,90 +1,46 @@
-/**
- * import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
- import { Monitor } from './monitor.entity';
- import { Notification } from './notification.entity';
- import { ApiProperty } from '@nestjs/swagger';
- 
- export enum IncidentStatus {
-   OPEN = 'OPEN',
-   ACKNOWLEDGED = 'ACKNOWLEDGED',
-   RESOLVED = 'RESOLVED',
- }
- 
- export enum IncidentSeverity {
-   CRITICAL = 'CRITICAL',
-   WARNING = 'WARNING',
- }
- 
- @Entity('incidents')
- export class Incident {
-   @ApiProperty()
-   @PrimaryGeneratedColumn('uuid')
-   id: string;
- 
-   @ApiProperty()
-   @Column({ type: 'enum', enum: IncidentStatus, default: IncidentStatus.OPEN })
-   status: IncidentStatus;
- 
-   @ApiProperty()
-   @Column({ type: 'enum', enum: IncidentSeverity, default: IncidentSeverity.CRITICAL })
-   severity: IncidentSeverity;
- 
-   @ApiProperty()
-   @Column({ type: 'text', nullable: true })
-   summary: string;
- 
-   @ApiProperty()
-   @Column({ nullable: true })
-   resolvedAt: Date;
- 
-   @ApiProperty()
-   @ManyToOne(() => Monitor, (monitor) => monitor.incidents)
-   @JoinColumn({ name: 'monitor_id' })
-   monitor: Monitor;
- 
-   @ApiProperty()
-   @OneToMany(() => Notification, (notif) => notif.incident)
-   notifications: Notification[];
- 
-   @ApiProperty()
-   @CreateDateColumn()
-   startedAt: Date;
- 
-   @ApiProperty()
-   @UpdateDateColumn()
-   updatedAt: Date;
- }
- */
-
+import { IncidentSeverity, IncidentStatus } from "@app/database";
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsInt, IsOptional, IsString, IsUrl, IsUUID } from "class-validator";
+import { IsDate, IsEnum, IsInt, IsOptional, IsString, IsUrl, IsUUID } from "class-validator";
 
 export class CreateIncidentDto {
-    @ApiProperty()
-    @IsString()
-    name: string;
 
-    @ApiProperty()
-    @IsString()
-    @IsUrl()
-    target: string;
+  @ApiProperty({type:"string",description:'Status of the incident : enums["OPEN", "ACKNOWLEDGED", "RESOLVED]',enum:IncidentStatus})
+  @IsEnum(IncidentStatus, { message: 'Invalid status : ["OPEN", "ACKNOWLEDGED", "RESOLVED]' })
+  status: IncidentStatus;
 
-    @ApiProperty()
-    @IsString()
-    @IsEnum(['GET', 'POST', 'PATCH', 'DELETE', 'PUT'])
-    method: string;
+  @ApiProperty({type:"string",description:'Status of the incident : enums["CRITICAL", "WARNING]',enum:IncidentSeverity})
+  @IsEnum(IncidentSeverity, { message: 'Invalid severity : ["CRITICAL", "WARNING]' })
+  severity: IncidentSeverity;
 
-    @ApiProperty()
-    @IsInt()
-    frequencySeconds: number;
+  @ApiProperty()
+  @IsString({ message: 'Summary should be a string' })
+  summary: string;
 
-    @ApiProperty()
-    @IsString()
-    @IsUUID()
-    projectId: string;
-    
-    @ApiProperty()
-    @IsString()
-    @IsOptional()
-    alertPolicyId?: string;
+  @ApiProperty({description:"Incident "})
+  @IsDate()
+  @IsOptional()
+  resolvedAt: Date;
+
+  @ApiProperty()
+  @IsDate()
+  @IsOptional()
+  acknowledgedAt: Date;
+
+  @ApiProperty()
+  @IsDate()
+  @IsOptional()
+  startedAt: Date;
+
+  @ApiProperty()
+  @IsUUID()
+  @IsOptional()
+  acknowledgedBy: string;
+
+  @ApiProperty()
+  @IsUUID()
+  monitorId: string;
+
+  @ApiProperty()
+  @IsString({ each: true })
+  notifications: string[];
 }
