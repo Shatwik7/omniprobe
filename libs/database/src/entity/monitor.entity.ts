@@ -4,7 +4,7 @@ import { AlertPolicy } from './alert-policy.entity';
 import { Metric } from './metric.entity';
 import { Incident } from './incident.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import {IsUrl } from 'class-validator';
+import { IsUrl } from 'class-validator';
 
 @Entity('monitors')
 @Index(['project_id', 'isActive'])
@@ -20,7 +20,7 @@ export class Monitor {
   name!: string;
 
   @ApiProperty()
-  @Column({ nullable: false , type:'text'})
+  @Column({ nullable: false, type: 'text' })
   @IsUrl({
     require_protocol: true,
     require_valid_protocol: true,
@@ -29,7 +29,7 @@ export class Monitor {
   target!: string; // URL or IP
 
   @ApiProperty()
-  @Column({ default: 'GET' , enum: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT']})
+  @Column({ default: 'GET', enum: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'] })
   method!: string;
 
   @ApiProperty()
@@ -45,7 +45,7 @@ export class Monitor {
   @ApiProperty()
   isActive!: boolean;
 
-  @Column({ type: 'jsonb', nullable: true , default: {}})
+  @Column({ type: 'jsonb', nullable: true, default: {} })
   @ApiProperty()
   headers?: Record<string, any>;
 
@@ -76,6 +76,12 @@ export class Monitor {
   @ApiProperty()
   @OneToMany(() => Metric, (metric) => metric.monitor)
   metrics!: Metric[];
+
+  @Column({ type: 'int', default: 200 })
+  expectedStatus!: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  expectedBody?: Record<string, any>;
 
   // Relationship to Incidents
   @ApiProperty()
