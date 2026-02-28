@@ -1,0 +1,46 @@
+stages:
+  - test
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  NODE_ENV: test
+  # Added Environment Variables
+  REDIS_HOST: "localhost"
+  REDIS_PORT: "6379"
+  POSTGRES_HOST: "localhost"
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: "postgres"
+  POSTGRES_PASSWORD: "postgres"
+  POSTGRES_DB: "mydatabase"
+  JWT_SECRET: "jwt-secret"
+  JWT_EXPIRATION: "1d"
+  REDIS_URL: "redis://localhost:6379"
+  KAFKA_URL: "localhost:9092"
+
+test_app:
+  stage: test
+  image: node:20
+
+  services:
+    - docker:24-dind
+
+  before_script:
+    - apt-get update && apt-get install -y docker-compose
+    - npm install
+
+  script:
+    - export $(grep -v '^#' .env.test | xargs)
+    - docker compose -f docker-compose.yml up -d
+    - sleep 20
+    # Run unit tests
+    - npm run test
+    # Run e2e tests
+    - npm run test:e2e
+
+  after_script:
+    - docker compose down
+
+  only:
+    - merge_requests
+    - main
