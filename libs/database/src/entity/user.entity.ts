@@ -16,26 +16,26 @@ import { Exclude } from 'class-transformer';
 export class User {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty()
   @Column({ unique: true })
-  email: string;
+  email!: string;
 
   // 🔐 NEVER expose password
   @Exclude()
   @ApiHideProperty()
   @Column({ select: false })
-  password: string;
+  password!: string;
 
   @ApiProperty()
   @Column()
-  name: string;
+  name!: string;
 
   // Teams user created
   @ApiHideProperty()
   @OneToMany(() => Team, (team) => team.createdBy)
-  createdTeams: Team[];
+  createdTeams!: Team[];
 
   // Teams user belongs to
   @ApiHideProperty()
@@ -45,13 +45,13 @@ export class User {
     joinColumn: { name: 'user_id', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'team_id', referencedColumnName: 'id' },
   })
-  teams: Team[];
+  teams?: Team[];
 
   @ApiProperty()
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty()
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

@@ -17,33 +17,33 @@ import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 export class Team {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty()
   @Column()
-  name: string;
+  name!: string;
 
   // Created by user
   @ApiHideProperty()
   @ManyToOne(() => User, (user) => user.createdTeams)
   @JoinColumn({ name: 'created_by' })
-  createdBy: User;
+  createdBy!: User;
 
   // Members (HIDE to avoid circular ref)
   @ApiHideProperty()
   @ManyToMany(() => User, (user) => user.teams)
-  members: User[];
+  members!: User[];
 
   // Projects (HIDE to avoid circular ref)
   @ApiHideProperty()
   @OneToMany(() => Project, (project) => project.team)
-  projects: Project[];
+  projects!: Project[];
 
   @ApiProperty()
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty()
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

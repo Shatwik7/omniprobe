@@ -16,32 +16,32 @@ import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 export class Project {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty()
   @Column()
-  name: string;
+  name!: string;
 
   @ApiProperty()
   @Column({ nullable: true })
-  description: string;
+  description?: string;
 
   // Team owning this project (HIDE)
   @ApiHideProperty()
   @ManyToOne(() => Team, (team) => team.projects, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'team_id' })
-  team: Team;
+  team!: Team;
 
   // Monitors
   @ApiHideProperty()
   @OneToMany(() => Monitor, (monitor) => monitor.project)
-  monitors: Monitor[];
+  monitors!: Monitor[];
 
   @ApiProperty()
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty()
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

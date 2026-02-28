@@ -7,7 +7,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsUrl } from 'class-validator';
 
 @Entity('monitors')
-@Index(['project_id', 'isActive'])
+@Index(['project', 'isActive'])
 @Index(['id', 'isActive'])
 export class Monitor {
   @ApiProperty()

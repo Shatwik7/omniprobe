@@ -6,27 +6,27 @@ import { ApiProperty } from '@nestjs/swagger';
 export class Notification {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
 
   @ApiProperty()
   @Column()
-  channel: string; // e.g., 'SLACK', 'EMAIL'
+  channel!: string; // e.g., 'SLACK', 'EMAIL'
 
   @ApiProperty()
   @Column()
-  recipient: string; // e.g., '#ops-channel', 'admin@example.com'
+  recipient!: string; // e.g., '#ops-channel', 'admin@example.com'
 
   @ApiProperty()
   @Column({ default: 'SENT' })
-  status: string;
+  status!: string;
 
   @ApiProperty()
   @ManyToOne(() => Incident, (incident) => incident.notifications)
   @JoinColumn({ name: 'incident_id' })
-  incident: Incident;
+  incident!: Incident;
 
   @ApiProperty()
   @CreateDateColumn()
-  sentAt: Date;
+  sentAt!: Date;
 }

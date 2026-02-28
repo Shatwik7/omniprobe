@@ -19,47 +19,47 @@ export enum IncidentSeverity {
 export class Incident {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty()
   @Column({ type: 'enum', enum: IncidentStatus, default: IncidentStatus.OPEN })
-  status: IncidentStatus;
+  status!: IncidentStatus;
 
   @ApiProperty()
   @Column({ type: 'enum', enum: IncidentSeverity, default: IncidentSeverity.CRITICAL })
-  severity: IncidentSeverity;
+  severity!: IncidentSeverity;
 
   @ApiProperty()
   @Column({ type: 'text', nullable: true })
-  summary: string;
+  summary?: string;
 
   @ApiProperty()
   @Column({ type: 'timestamp',nullable: true })
-  resolvedAt: Date;
+  resolvedAt?: Date;
 
   @ApiProperty()
   @Column({type:"timestamp", nullable:true})
-  acknowledgedAt: Date;
+  acknowledgedAt?: Date;
 
   @ApiProperty({ required: false})
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'acknowledged_by' })
-  acknowledgedBy: User;
+  acknowledgedBy?: User;
 
   @ApiProperty()
   @ManyToOne(() => Monitor, (monitor) => monitor.incidents)
   @JoinColumn({ name: 'monitor_id' })
-  monitor: Monitor;
+  monitor!: Monitor;
 
   @ApiProperty()
   @OneToMany(() => Notification, (notif) => notif.incident)
-  notifications: Notification[];
+  notifications!: Notification[];
 
   @ApiProperty()
   @CreateDateColumn()
-  startedAt: Date;
+  startedAt!: Date;
 
   @ApiProperty()
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
