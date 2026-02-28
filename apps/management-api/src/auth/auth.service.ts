@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
 import { Repository } from 'typeorm';
 import { SignInDto } from './dto/sign-in.dto';
-import { access } from 'fs';
 import { JwtService } from '@nestjs/jwt';
 import { SignUpDto } from './dto/signup.dto';
 @Injectable()
@@ -17,7 +16,11 @@ export class AuthService {
     ) { }
 
     async validateEmailPassword(SignInDto: SignInDto) {
-        const user = await this.usersRepository.findOne({ where: { email: SignInDto.email } });
+        const user = await this.usersRepository
+            .createQueryBuilder('user')
+            .addSelect('user.password')
+            .where('user.email = :email', { email: SignInDto.email })
+            .getOne();
         if (user == undefined) return null;
         const valid = await argon2.verify(user?.password, SignInDto.password);
         if (!valid) return null;

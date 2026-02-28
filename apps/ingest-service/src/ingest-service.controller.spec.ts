@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { IngestServiceController } from './ingest-service.controller';
 import { IngestServiceService } from './ingest-service.service';
 import { HttpMethods } from '@app/kafka-topics/enums/HttpMethods';
-import { HttpErrorType } from '@app/kafka-topics/enums/HttpError';
+import { HttpErrorType } from '@app/kafka-topics';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
