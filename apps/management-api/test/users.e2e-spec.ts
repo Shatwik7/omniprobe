@@ -148,7 +148,7 @@ describe('Users (e2e, real app + real db)', () => {
     );
   });
 
-  it('GET /:id should return user by id', async () => {
+  it('GET /users/:id should return user by id', async () => {
     const payload = buildUserPayload();
 
     const created = await request(app.getHttpServer())
@@ -158,7 +158,7 @@ describe('Users (e2e, real app + real db)', () => {
     trackUserId(created.body.id);
 
     const found = await request(app.getHttpServer())
-      .get(`/${created.body.id}`)
+      .get(`/users/${created.body.id}`)
       .expect(200);
 
     expect(found.body).toEqual(
@@ -170,7 +170,7 @@ describe('Users (e2e, real app + real db)', () => {
     );
   });
 
-  it('DELETE /:id should remove user and return false when deleting again', async () => {
+  it('DELETE /users/:id should remove user and return false when deleting again', async () => {
     const payload = buildUserPayload();
 
     const created = await request(app.getHttpServer())
@@ -178,11 +178,11 @@ describe('Users (e2e, real app + real db)', () => {
       .send(payload)
       .expect(201);
 
-    await request(app.getHttpServer()).delete(`/${created.body.id}`).expect(200, 'true');
-    await request(app.getHttpServer()).delete(`/${created.body.id}`).expect(200, 'false');
+    await request(app.getHttpServer()).delete(`/users/${created.body.id}`).expect(200, 'true');
+    await request(app.getHttpServer()).delete(`/users/${created.body.id}`).expect(200, 'false');
   });
 
-  it('PATCH /:id should return current update placeholder message', async () => {
+  it('PATCH /users/:id should return current update placeholder message', async () => {
     const payload = buildUserPayload();
 
     const created = await request(app.getHttpServer())
@@ -192,7 +192,7 @@ describe('Users (e2e, real app + real db)', () => {
     trackUserId(created.body.id);
 
     const updated = await request(app.getHttpServer())
-      .patch(`/${created.body.id}`)
+      .patch(`/users/${created.body.id}`)
       .send({ name: 'renamed-user' })
       .expect(200);
 

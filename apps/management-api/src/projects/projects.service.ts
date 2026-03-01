@@ -60,28 +60,19 @@ export class ProjectsService {
   }
 
   async remove(id: string, userId: string): Promise<boolean> {
-    const Project = await this.projectsRepo.findOne(
+    const project = await this.projectsRepo.findOne(
       {
         where: { id },
-        relations: ['team'],
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          createdAt: true,
-          updatedAt: true,
-          team: {
-            id: true,
-            name: true,
-            createdBy: true,
-            members: {
-              id: true
-            }
-          }
-        }
+        relations: ['team', 'team.createdBy'],
       });
 
-    if (Project?.team.createdBy.id !== userId) throw new UnauthorizedException("User is not the owner of the project");
+    if (!project) {
+      return false;
+    }
+
+    if (project.team?.createdBy?.id !== userId) {
+      throw new UnauthorizedException('User is not the owner of the project');
+    }
 
     const { affected } = await this.projectsRepo.delete(id);
 

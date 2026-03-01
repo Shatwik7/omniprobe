@@ -26,20 +26,21 @@ export class TeamMemberGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     const teamId = request.params.teamId;
+    const authenticatedUserId = user?.id ?? user?.userId;
     
-    if (!user || !user.id) {
+    if (!authenticatedUserId) {
       throw new ForbiddenException('User not authenticated');
     }
 
-    if (!teamId && isUUID(teamId) === false) {
+    if (!teamId || isUUID(teamId) === false) {
       throw new BadRequestException('Team ID parameter is missing');
     }
 
     // Check if the user is a member or creator of the team
     const team = await this.teamRepo.findOne({
       where: [
-        { id: teamId, members: { id: user.userId } },
-        { id: teamId, createdBy: { id: user.userId } }
+        { id: teamId, members: { id: authenticatedUserId } },
+        { id: teamId, createdBy: { id: authenticatedUserId } }
       ],
     });
 

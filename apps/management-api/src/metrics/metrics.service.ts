@@ -30,7 +30,11 @@ export class MetricsService {
   }
 
   create(createMetricDto: CreateMetricDto): Promise<Metric> {
-    const metric = this.metricRepository.create(createMetricDto);
+    const { monitorId, ...metricPayload } = createMetricDto;
+    const metric = this.metricRepository.create({
+      ...metricPayload,
+      monitor: { id: monitorId },
+    });
     return this.metricRepository.save(metric);
   }
 

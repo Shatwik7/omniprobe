@@ -30,17 +30,12 @@ test_app:
     - npm install
 
   script:
-    - export $(grep -v '^#' .env.test | xargs)
-    - docker compose -f docker-compose.yml up -d
-    - sleep 20
+    - docker compose up -d
     # Run unit tests
-    - npm run test
+    - npm run test -- --detectOpenHandles --forceExit
     # Run e2e tests
-    - npm run test:e2e
+    - npm run test:e2e -- --detectOpenHandles --forceExit
 
   after_script:
     - docker compose down
 
-  only:
-    - merge_requests
-    - main

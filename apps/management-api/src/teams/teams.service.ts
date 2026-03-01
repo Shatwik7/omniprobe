@@ -77,6 +77,18 @@ export class TeamsService {
   }
 
   async remove(id: string): Promise<boolean> {
+    const team = await this.teamsRepo.findOne({
+      where: { id },
+      relations: ['members'],
+    });
+
+    if (!team) {
+      return false;
+    }
+
+    team.members = [];
+    await this.teamsRepo.save(team);
+
     const options: FindOptionsWhere<Team> = { id: id };
     const deleted = await this.teamsRepo.delete(options);
 
