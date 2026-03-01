@@ -122,7 +122,7 @@ export class IngestServiceService {
       tls_handshake_time_ms: event.Response.tls_end,
       time_to_first_byte_ms: event.Response.ttfb,
       content_transfer_time_ms: event.Response.server_processing_time,
-      region: 'IN',
+      region: process.env.REGION || 'IN',
     });
 
     await this.metricRepo.save(metric);
