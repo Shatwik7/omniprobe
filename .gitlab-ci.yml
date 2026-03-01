@@ -20,22 +20,23 @@ variables:
 
 test_app:
   stage: test
-  image: node:20
+  image: docker:24
 
   services:
-    - docker:24-dind
+    - name: docker:24-dind
+      command: ["--tls=false"]
 
   before_script:
-    - apt-get update && apt-get install -y docker-compose
+    - apk add --no-cache nodejs npm docker-compose
     - npm install
 
   script:
-    - docker compose up -d
+    - docker-compose up -d
     # Run unit tests
     - npm run test -- --detectOpenHandles --forceExit
     # Run e2e tests
     - npm run test:e2e -- --detectOpenHandles --forceExit
 
   after_script:
-    - docker compose down
+    - docker-compose down
 
