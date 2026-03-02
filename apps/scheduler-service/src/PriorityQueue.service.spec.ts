@@ -36,30 +36,40 @@ describe('PriorityQueue (Integration)', () => {
       // Cleanup before starting
       await service.getClient().del(testQueue);
 
-      // 1. Add items with different scores (timestamps)
+      //Add items with different scores (timestamps)
       await service.addItem(testQueue, now - 5000, item1); // Due
       await service.addItem(testQueue, now - 1000, item2); // Due
       await service.addItem(testQueue, now + 5000, item3); // Not due
 
-      // 2. Get due items
       const dueItems = await service.getDueItems(10, testQueue, now);
       
       expect(dueItems).toHaveLength(2);
       expect(dueItems).toContain(item1);
       expect(dueItems).toContain(item2);
       expect(dueItems).not.toContain(item3);
-
-      // 3. Remove an item
       const removedCount = await service.removeItem(testQueue, item1);
       expect(removedCount).toBe(1);
-
-      // 4. Verify removal
       const remainingItems = await service.getDueItems(10, testQueue, now);
       expect(remainingItems).toHaveLength(1);
       expect(remainingItems).toContain(item2);
-
-      // Final Cleanup
       await service.getClient().del(testQueue);
     });
+  });
+
+  describe('Data Existence Check', () => {
+    const queueName = 'test-data-existence';
+
+    it('should check and set data existence in Redis', async () => {
+      await service.getClient().del(`priority-queue:${queueName}`);
+      let exists = await service.checkDataExists(queueName);
+      expect(exists).toBe(false);
+      await service.setDataExists(queueName, '1', 10);
+
+      exists = await service.checkDataExists(queueName);
+      expect(exists).toBe(true);
+      await new Promise(resolve => setTimeout(resolve, 11000)); // Wait 11 seconds
+      exists = await service.checkDataExists(queueName);
+      expect(exists).toBe(false);
+    }, 15000);
   });
 });

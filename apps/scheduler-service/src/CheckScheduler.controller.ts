@@ -13,13 +13,33 @@ export class CheckSchedulerController {
     constructor(
         private readonly priorityQueue: PriorityQueue, 
     ){}
-    
 
-    //when new monitor is requested, add it to the priority queue with its frequency as the score
+    private toCheckExecutionAddEvent(data: unknown): CheckExecutionAddEvent | null {
+        let parsedData: unknown = data;
+
+        if (typeof parsedData === "string") {
+            try {
+                parsedData = JSON.parse(parsedData);
+            } catch {
+                return null;
+            }
+        }
+
+        if (!parsedData || typeof parsedData !== "object" || Array.isArray(parsedData)) {
+            return null;
+        }
+
+        return plainToInstance(CheckExecutionAddEvent, parsedData);
+    }
+    
     @EventPattern(Topics.CHECK_EXECUTION_ADD)
     async handleCheckExecutionRequested(@Payload() data: any) {
         try{
-            const dto=plainToInstance(CheckExecutionAddEvent, data);
+            const dto = this.toCheckExecutionAddEvent(data);
+            if (!dto) {
+                console.log("❌ Invalid message. Skipping.");
+                return;
+            }
             const erros=await validate(dto);
             if(erros.length>0){
                 console.log("❌ Invalid message. Skipping.");
