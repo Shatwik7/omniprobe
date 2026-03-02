@@ -29,6 +29,10 @@ export class CreateMetricDto {
 
     @ApiProperty()
     @IsInt()
+    server_processing_time_ms: number;
+
+    @ApiProperty()
+    @IsInt()
     content_transfer_time_ms: number;
 
     @ApiProperty()

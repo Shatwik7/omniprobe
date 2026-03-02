@@ -11,20 +11,30 @@ export class Notification {
 
   @ApiProperty()
   @Column()
-  channel!: string; // e.g., 'SLACK', 'EMAIL'
+  channel!: string; // e.g., 'SLACK', 'EMAIL' , 'SYSTEM'
 
   @ApiProperty()
   @Column()
   recipient!: string; // e.g., '#ops-channel', 'admin@example.com'
 
   @ApiProperty()
-  @Column({ default: 'SENT' })
+  @Column({ default: 'SENT', enum: ['PENDING', 'SENT', 'FAILED', 'SEEN'] })
   status!: string;
 
   @ApiProperty()
-  @ManyToOne(() => Incident, (incident) => incident.notifications)
+  @ManyToOne(() => Incident, (incident) => incident.notifications, { nullable: true })
   @JoinColumn({ name: 'incident_id' })
-  incident!: Incident;
+  incident?: Incident;
+
+
+  @ApiProperty()
+  @Column({ type: 'text', nullable: true })
+  message?: string;
+
+  @ApiProperty()
+  @Column({ type: 'text', nullable: true })
+  title?: string;
+
 
   @ApiProperty()
   @CreateDateColumn()

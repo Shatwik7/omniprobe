@@ -250,7 +250,7 @@ describe('Incidents (e2e, real app + real db)', () => {
     expect(updated.text).toBe('This action updates a #NaN incident');
   });
 
-  it('DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id should return true then false', async () => {
+  it('POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/acknowledge should acknowledge incident', async () => {
     const auth = await createAuthenticatedUser();
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
@@ -258,12 +258,65 @@ describe('Incidents (e2e, real app + real db)', () => {
     const created = await createIncident(auth.token, teamId, projectId, monitorId);
 
     await request(app.getHttpServer())
-      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`)
+      .post(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}/acknowledge`)
+      .set('Authorization', `Bearer ${auth.token}`)
+      .expect(200);
+
+    const found = await request(app.getHttpServer())
+      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`)
+      .set('Authorization', `Bearer ${auth.token}`)
+      .expect(200);
+
+    expect(found.body.status).toBe(IncidentStatus.ACKNOWLEDGED);
+    expect(found.body.acknowledgedBy).not.toBeNull();
+    expect(found.body.acknowledgedBy).toEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        name: expect.any(String),
+        email: expect.any(String),
+      }),
+    );
+  });
+
+  it('POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/resolve should resolve incident', async () => {
+    const auth = await createAuthenticatedUser();
+    const teamId = await createTeam(auth.token);
+    const projectId = await createProject(auth.token, teamId);
+    const monitorId = await createMonitor(auth.token, teamId, projectId);
+    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+
+    await request(app.getHttpServer())
+      .post(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}/resolve`)
+      .set('Authorization', `Bearer ${auth.token}`)
+      .expect(200);
+
+    const found = await request(app.getHttpServer())
+      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`)
+      .set('Authorization', `Bearer ${auth.token}`)
+      .expect(200);
+
+    expect(found.body.status).toBe(IncidentStatus.RESOLVED);
+  });
+
+  it('DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id should return true then false', async () => {
+    const auth = await createAuthenticatedUser();
+    const teamId = await createTeam(auth.token);
+    const projectId = await createProject(auth.token, teamId);
+    const monitorId = await createMonitor(auth.token, teamId, projectId);
+    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+    const incidentId = created.body.id as string;
+    const incidentIndex = createdIncidentIds.indexOf(incidentId);
+    if (incidentIndex > -1) {
+      createdIncidentIds.splice(incidentIndex, 1);
+    }
+
+    await request(app.getHttpServer())
+      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${incidentId}`)
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'true');
 
     await request(app.getHttpServer())
-      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`)
+      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${incidentId}`)
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'false');
   });
@@ -278,4 +331,5 @@ describe('Incidents (e2e, real app + real db)', () => {
       .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents`)
       .expect(401);
   });
+  
 });

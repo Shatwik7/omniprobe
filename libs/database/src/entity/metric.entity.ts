@@ -20,8 +20,8 @@ export class Metric {
   statusCode!: number;
 
   @ApiProperty()
-  @Column({ type: 'jsonb', nullable: false, default: { dns: 0, tcp: 0, tls: 0, ttfb: 0 } })
-  breakdown!: { dns: number; tcp: number; tls: number; ttfb: number };
+  @Column({ type: 'jsonb', nullable: false, default: { dns: 0, tcp: 0, tls: 0, ttfb: 0, spt: 0, ctt: 0 } })
+  breakdown!: { dns: number; tcp: number; tls: number; ttfb: number, spt: number, ctt: number };
 
   @ApiProperty()
   @Column({ type: 'int' })
@@ -38,6 +38,10 @@ export class Metric {
   @ApiProperty()
   @Column({ type: 'int' })
   time_to_first_byte_ms!: number;
+
+  @ApiProperty()
+  @Column({ type: 'int' })
+  server_processing_time_ms!: number;
 
   @ApiProperty()
   @Column({ type: 'int' })
@@ -59,6 +63,10 @@ export class Metric {
   @ManyToOne(() => Monitor, (monitor) => monitor.metrics, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'monitor_id' })
   monitor!: Monitor;
+
+  @ApiProperty()
+  @CreateDateColumn()
+  responseBody!: string;
 
   // Using CreateDateColumn as the time-series timestamp
   @ApiProperty()

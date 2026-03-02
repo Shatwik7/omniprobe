@@ -52,6 +52,7 @@ describe('Metrics (e2e, real app + real db)', () => {
     tcp_connection_time_ms: 10,
     tls_handshake_time_ms: 15,
     time_to_first_byte_ms: 30,
+    server_processing_time_ms: 35,
     content_transfer_time_ms: 40,
     total_time_ms: 120,
     region: 'IN',

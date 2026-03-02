@@ -8,13 +8,14 @@ import { IncidentSeverity, IncidentStatus } from '@app/database';
 
 describe('IncidentsService', () => {
   let service: IncidentsService;
-  let repository: Pick<Repository<Incident>, 'create' | 'save' | 'find' | 'findOne' | 'delete'>;
+  let repository: Pick<Repository<Incident>, 'create' | 'save' | 'find' | 'findOne' | 'delete' | 'update'>;
 
   const incidentRepositoryMock = {
     create: jest.fn(),
     save: jest.fn(),
     find: jest.fn(),
     findOne: jest.fn(),
+    update: jest.fn(),
     delete: jest.fn(),
   };
 
@@ -90,7 +91,7 @@ describe('IncidentsService', () => {
 
     const response = await service.findOne('incident-1');
 
-    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'incident-1' } });
+    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'incident-1' }, relations: { acknowledgedBy: true, metric: true, monitor: true, notifications: true } });
     expect(response).toEqual(incident);
   });
 
@@ -115,5 +116,36 @@ describe('IncidentsService', () => {
     const response = await service.remove('incident-1');
 
     expect(response).toBe(false);
+  });
+
+  it('acknowledge should update incident with acknowledged status and user', async () => {
+    incidentRepositoryMock.update.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+
+    const response = await service.acknowledge('incident-1', 'user-1');
+
+    expect(repository.update).toHaveBeenCalledWith(
+      { id: 'incident-1' },
+      {
+        acknowledgedAt: expect.any(String),
+        acknowledgedBy: { id: 'user-1' },
+        status: IncidentStatus.ACKNOWLEDGED,
+      },
+    );
+    expect(response).toEqual({ affected: 1 });
+  });
+
+  it('resolve should update incident with resolved status', async () => {
+    incidentRepositoryMock.update.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+
+    const response = await service.resolve('incident-1');
+
+    expect(repository.update).toHaveBeenCalledWith(
+      { id: 'incident-1' },
+      {
+        resolvedAt: expect.any(String),
+        status: IncidentStatus.RESOLVED,
+      },
+    );
+    expect(response).toEqual({ affected: 1 });
   });
 });

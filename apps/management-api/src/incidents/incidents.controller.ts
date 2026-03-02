@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe, HttpStatus, HttpCode, Req } from '@nestjs/common';
 import { IncidentsService } from './incidents.service';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
@@ -32,6 +32,21 @@ export class IncidentsController {
   @UseGuards(TeamMemberGuard)
   update(@Param('id') id: string, @Body() updateIncidentDto: UpdateIncidentDto) {
     return this.incidentsService.update(+id, updateIncidentDto);
+  }
+
+  @Post(':id/acknowledge')
+  @UseGuards(TeamMemberGuard)
+  @HttpCode(HttpStatus.OK)
+  acknowledge(@Param('id',ParseUUIDPipe) id: string, @Req() req: any, @Body('userId') userId?: string) {
+    const acknowledgedByUserId = userId ?? req.user?.id ?? req.user?.userId;
+    return this.incidentsService.acknowledge(id, acknowledgedByUserId);
+  }
+
+  @Post(':id/resolve')
+  @UseGuards(TeamMemberGuard)
+  @HttpCode(HttpStatus.OK)
+  resolve(@Param('id',ParseUUIDPipe) id: string) {
+    return this.incidentsService.resolve(id);
   }
 
   @Delete(':id')

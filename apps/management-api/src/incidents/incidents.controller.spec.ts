@@ -10,6 +10,8 @@ describe('IncidentsController', () => {
   let controller: IncidentsController;
   let incidentsService: {
     create: jest.Mock;
+    acknowledge: jest.Mock;
+    resolve: jest.Mock;
     findAll: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
@@ -20,6 +22,8 @@ describe('IncidentsController', () => {
     create: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
+    acknowledge: jest.fn(),
+    resolve: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
   };
@@ -103,6 +107,24 @@ describe('IncidentsController', () => {
     const response = await controller.remove('incident-1');
 
     expect(incidentsService.remove).toHaveBeenCalledWith('incident-1');
+    expect(response).toBe(true);
+  });
+
+  it('acknowledge should delegate to incidentsService.acknowledge', async () => {
+    incidentsService.acknowledge.mockReturnValueOnce(Promise.resolve(true));
+
+    const response = await controller.acknowledge('incident-1', { user: { id: 'user-1' } }, undefined);
+
+    expect(incidentsService.acknowledge).toHaveBeenCalledWith('incident-1', 'user-1');
+    expect(response).toBe(true);
+  });
+
+  it('resolve should delegate to incidentsService.resolve', async () => {
+    incidentsService.resolve.mockReturnValueOnce(Promise.resolve(true));
+
+    const response = await controller.resolve('incident-1');
+
+    expect(incidentsService.resolve).toHaveBeenCalledWith('incident-1');
     expect(response).toBe(true);
   });
 });

@@ -86,7 +86,7 @@ describe('Incidents Integration (controller + service + repository)', () => {
 
     const response = await controller.findOne('incident-1');
 
-    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'incident-1' } });
+    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'incident-1' }, relations: { acknowledgedBy: true, metric: true, monitor: true, notifications: true } });
     expect(response).toEqual({ id: 'incident-1' });
   });
 

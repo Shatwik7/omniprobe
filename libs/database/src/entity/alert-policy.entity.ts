@@ -6,11 +6,11 @@ import { ApiProperty } from '@nestjs/swagger';
 export class AlertPolicy {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty()
   @Column()
-  name: string;
+  name!: string;
 
   // Configuration for thresholds (e.g., { "cpu_threshold": 80, "timeout_ms": 5000 })
   @ApiProperty()
@@ -25,23 +25,23 @@ export class AlertPolicy {
       
     } 
   })
-  rules: Record<string, any>;
+  rules?: Record<string, any>;
 
   // Channels can be linked here (Slack, Email, Phone etc.) - Simplified for brevity
   @ApiProperty()
   @Column({ type: 'jsonb', nullable: true })
-  notificationChannels: Record<string, any>;
+  notificationChannels?: Record<string, any>;
 
   // "Each Monitor Can Have A Alert Policy" -> Inverse side
   @ApiProperty()
   @OneToMany(() => Monitor, (monitor) => monitor.alertPolicy)
-  monitors: Monitor[];
+  monitors?: Monitor[];
 
   @ApiProperty()
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty()
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }
