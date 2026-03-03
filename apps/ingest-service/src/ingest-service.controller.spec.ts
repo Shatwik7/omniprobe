@@ -4,6 +4,7 @@ import { IngestServiceService } from './ingest-service.service';
 import { HttpMethods } from '@app/kafka-topics/enums/HttpMethods';
 import { HttpErrorType } from '@app/kafka-topics';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
+import 'reflect-metadata';
 
 const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
 
@@ -64,6 +65,7 @@ describe('IngestServiceController', () => {
           server_processing_time: 1,
           status_code: 200,
         },
+        region:'IN'
       };
 
       await controller.handleCheckExecutionCompleted(event);
@@ -82,7 +84,7 @@ describe('IngestServiceController', () => {
       const event = {
         Request: {
           id: 'not-a-uuid',
-          checkId: '',
+          checkId: 'not-a-uuid',
           url: 'http://example.com',
           method: HttpMethods.GET,
           timeout: 1000,
@@ -99,6 +101,7 @@ describe('IngestServiceController', () => {
           server_processing_time: 1,
           status_code: 200,
         },
+        region:'IN'
       };
 
       await controller.handleCheckExecutionCompleted(event);
@@ -128,6 +131,7 @@ describe('IngestServiceController', () => {
           timestamp: Date.now(),
           url: 'http://example.com',
         },
+        region:'IN'
       };
 
       await controller.handleCheckExecutionFailed(event);
@@ -145,7 +149,7 @@ describe('IngestServiceController', () => {
       const event = {
         Request: {
           id: 'bad-id',
-          checkId: '',
+          checkId: VALID_UUID,
           url: 'http://example.com',
           method: HttpMethods.GET,
           timeout: 1000,
@@ -157,6 +161,7 @@ describe('IngestServiceController', () => {
           timestamp: Date.now(),
           url: 'http://example.com',
         },
+        region:'IN',
       };
 
       await controller.handleCheckExecutionFailed(event);

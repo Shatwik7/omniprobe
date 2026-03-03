@@ -88,6 +88,7 @@ describe('IngestServiceService', () => {
         dns_lookup_end: 700,
         server_processing_time: 50,
       },
+      region: 'IN'
     };
 
     it('should do nothing if monitor is not found', async () => {
@@ -208,6 +209,7 @@ describe('IngestServiceService', () => {
         timestamp: Date.now(),
         url: 'http://test.com',
       },
+      region:'IN'
     };
 
     it('should do nothing if monitor is not found', async () => {

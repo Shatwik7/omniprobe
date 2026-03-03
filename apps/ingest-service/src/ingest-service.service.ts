@@ -119,10 +119,11 @@ export class IngestServiceService {
       total_time_ms: event.Response.tdt,
       dns_response_time_ms: event.Response.dns_lookup_end,
       tcp_connection_time_ms: event.Response.tcp_end,
+      server_processing_time_ms:event.Response.server_processing_time,
       tls_handshake_time_ms: event.Response.tls_end,
       time_to_first_byte_ms: event.Response.ttfb,
       content_transfer_time_ms: event.Response.server_processing_time,
-      region: process.env.REGION || 'IN',
+      region: event.region,
     });
 
     await this.metricRepo.save(metric);
