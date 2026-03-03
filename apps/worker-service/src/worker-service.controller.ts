@@ -30,12 +30,14 @@ export class WorkerController {
       if (data.success) {
         this.EventProducer.CheckCompleted({
           Request: dto,
-          Response: data.metrics
+          Response: data.metrics,
+          region:process.env.REGION || 'IN'
         })
       } else {
         this.EventProducer.CheckFailed({
           Request: dto,
-          Response: data.error
+          Response: data.error,
+          region:process.env.REGION || 'IN'
         })
       }
     } catch (e) {

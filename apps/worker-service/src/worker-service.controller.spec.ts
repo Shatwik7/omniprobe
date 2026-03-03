@@ -81,6 +81,7 @@ describe('WorkerController', () => {
       expect(eventProducerService.CheckCompleted).toHaveBeenCalledWith({
         Request: expect.objectContaining(validPayload),
         Response: metrics,
+        region: process.env.REGION || 'IN',
       });
       expect(eventProducerService.CheckFailed).not.toHaveBeenCalled();
 
@@ -102,6 +103,7 @@ describe('WorkerController', () => {
       expect(eventProducerService.CheckFailed).toHaveBeenCalledWith({
         Request: expect.objectContaining(validPayload),
         Response: error,
+        region: process.env.REGION || 'IN',
       });
       expect(eventProducerService.CheckCompleted).not.toHaveBeenCalled();
 
