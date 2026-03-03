@@ -1,4 +1,4 @@
-import { ValidateNested } from "class-validator";
+import { IsEnum, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { CheckExecutionRequestedEvent } from "./CheckExecutionRequestedEvent.dto";
 import { HttpCheckError } from "./HttpCheckError.dto";
@@ -11,4 +11,8 @@ export class CheckExecutionFailedEvent {
     @ValidateNested()
     @Type(() => HttpCheckError)
     Response!: HttpCheckError;
+
+    @IsEnum(['EU', 'IN', 'US', 'AU'])
+    @IsString()
+    region!: string;
 }

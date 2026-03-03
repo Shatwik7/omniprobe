@@ -1,4 +1,4 @@
-import { IsNumber, IsPositive } from "class-validator";
+import { IsEnum, IsNumber, IsPositive, IsString } from "class-validator";
 
 export class HttpTimingMetrics {
     @IsPositive()
