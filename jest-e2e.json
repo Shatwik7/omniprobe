@@ -2,6 +2,13 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
+  "reporters": [
+    "default",
+    ["jest-html-reporters", { "publicPath": "reports", "filename": "jest-html-report.html" }]
+  ],
+  "collectCoverage": true,
+  "coverageReporters": ["json", "text", "html"],
+  "coverageDirectory": "reports/coverage",
   "testMatch": ["**/*.e2e-spec.ts", "**/*.spec.ts"],
   "moduleNameMapper": {
     "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",

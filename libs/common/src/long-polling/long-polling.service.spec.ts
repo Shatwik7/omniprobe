@@ -1,21 +1,29 @@
+import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LongPollingService, LongPollingOptions } from './long-polling.service';
 import { LONG_POLLING_OPTIONS } from './long-polling.constant';
-import { Redis } from 'ioredis';
-import MockRedis from 'ioredis-mock';
 import {jest, describe, it, expect, beforeEach, afterEach} from '@jest/globals';
+
+jest.mock('ioredis', () => {
+  const MockRedis = require('ioredis-mock');
+  return {
+    __esModule: true,
+    default: MockRedis,
+  };
+});
+
 jest.useFakeTimers();
 
 describe('LongPollingService', () => {
   let service: LongPollingService;
-  let redis: Redis;
+  let moduleRef: TestingModule;
 
   beforeEach(async () => {
     const options: LongPollingOptions = {
-      redisUrl: 'redis://localhost:6379',
+      redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         LongPollingService,
         {
@@ -25,17 +33,12 @@ describe('LongPollingService', () => {
       ],
     }).compile();
 
-    service = module.get<LongPollingService>(LongPollingService);
-
-    // Mock ioredis with separate clients for pub and sub
-    const pubMockRedis = new MockRedis();
-    const subMockRedis = new MockRedis();
-    service['pubClient'] = pubMockRedis;
-    service['subClient'] = subMockRedis;
-    redis = subMockRedis;
+    service = moduleRef.get<LongPollingService>(LongPollingService);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await service.onModuleDestroy();
+    await moduleRef.close();
     jest.clearAllMocks();
   });
 

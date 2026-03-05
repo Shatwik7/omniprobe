@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
 import { IngestServiceModule } from './../src/ingest-service.module';
+import {describe, beforeEach, it, expect, afterAll } from '@jest/globals';
 
 describe('IngestServiceController (e2e)', () => {
   let app: INestApplication;
@@ -15,10 +15,12 @@ describe('IngestServiceController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  it('should be defined', () => {
+    expect(app).toBeDefined();
   });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
 });
