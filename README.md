@@ -4,7 +4,11 @@
     ```bash
     docker compose up -d
     ```
-2.  **Start the application:**
+2.  **Install Modules:**
+```bash
+npm run install
+```
+3.  **Start the application:**
     ```bash
     npm run start:dev
     ```
