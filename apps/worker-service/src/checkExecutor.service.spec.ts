@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CheckExecutorService } from './checkExecutor.service';
 import { expect, describe, it, beforeEach, jest } from '@jest/globals';
 
+jest.setTimeout(60000);
+
 describe('WorkerServiceController', () => {
   let checkExecutorService: CheckExecutorService;
 
@@ -148,5 +150,3 @@ describe('WorkerServiceController', () => {
     }
   })
 });
-
-

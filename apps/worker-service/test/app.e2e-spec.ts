@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { WorkerServiceModule } from './../src/worker-service.module';
-import { describe, beforeEach, it, expect } from '@jest/globals';
+import { describe, beforeEach, it, expect, jest } from '@jest/globals';
+
+jest.setTimeout(30000);
 
 describe('WorkerServiceController (e2e)', () => {
   let app: INestApplication;

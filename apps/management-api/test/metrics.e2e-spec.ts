@@ -5,9 +5,11 @@ import { DataSource, Repository } from 'typeorm';
 import { Metric, Monitor, Project, Team, User } from '@app/database';
 import { ManagementApiModule } from '../src/management-api.module';
 import * as dotenv from 'dotenv';
-import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
+import { describe, beforeAll, afterAll, it, expect, jest } from '@jest/globals';
 
 dotenv.config();
+
+jest.setTimeout(60000);
 
 describe('Metrics (e2e, real app + real db)', () => {
   let app: INestApplication;

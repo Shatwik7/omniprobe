@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CacheService } from './Cache.service';
 import { Monitor } from '@app/database';
-import { describe, it, expect, afterAll, beforeAll } from '@jest/globals';
+import { describe, it, expect, afterAll, beforeAll, jest } from '@jest/globals';
 
 
 /**
@@ -13,6 +13,8 @@ import { describe, it, expect, afterAll, beforeAll } from '@jest/globals';
  * It uses the setMonitor/getMonitor methods which handle JSON serialization.
  * After the test, it cleans up by deleting the test key from Redis.
  */
+jest.setTimeout(30000);
+
 describe('CacheService (Integration)', () => {
     let service: CacheService;
     let module: TestingModule; // Store module reference

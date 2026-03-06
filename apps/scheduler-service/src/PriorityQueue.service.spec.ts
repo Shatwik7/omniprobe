@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PriorityQueue } from './PriorityQueue.service';
-import { describe, it, expect, afterAll, beforeAll } from '@jest/globals';
+import { describe, it, expect, afterAll, beforeAll, jest } from '@jest/globals';
+
+jest.setTimeout(30000);
 
 describe('PriorityQueue (Integration)', () => {
   let service: PriorityQueue;

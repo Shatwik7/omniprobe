@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { UnauthorizedException } from '@nestjs/common';
-import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
+import { describe, beforeAll, afterAll, it, expect, jest } from '@jest/globals';
 import * as dotenv from 'dotenv';
 
 import { AuthModule } from './auth.module';
@@ -13,6 +13,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { User } from '@app/database';
 
 dotenv.config();
+
+jest.setTimeout(30000);
 
 describe('Auth Integration (module + service + strategies)', () => {
   let moduleRef: TestingModule;

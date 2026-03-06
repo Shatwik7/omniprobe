@@ -5,6 +5,17 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
   NODE_ENV: test
+  REDIS_HOST: localhost
+  REDIS_PORT: 6379
+  POSTGRES_HOST: "localhost"
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: "postgres"
+  POSTGRES_PASSWORD: "postgres"
+  POSTGRES_DB: "mydatabase"
+  JWT_SECRET: jwt-secret
+  JWT_EXPIRATION: 1d
+  REDIS_URL: "redis://localhost:6379"
+  KAFKA_URL: "localhost:9092"
 
 test_app:
   stage: test
@@ -19,11 +30,23 @@ test_app:
     - npm install
 
   script:
+    - export KAFKA_ADVERTISED_HOST_NAME=docker
     - docker-compose up -d
+    - sleep 10
+    - export POSTGRES_HOST=docker
+    - export REDIS_HOST=docker
+    - export REDIS_URL=redis://docker:6379
+    - export KAFKA_BROKERS=docker:9092
+    - export KAFKA_URL=docker:9092
+    - export PGHOST=docker
     # Run unit tests
-    - npm run test:e2e -- --detectOpenHandles --forceExit --runInBand --no-cache
+    - npm run test:e2e -- --ci --forceExit --no-cache
 
 
   after_script:
     - docker-compose down
 
+  artifacts:
+    when: always
+    reports:
+      junit: reports/jest-junit.xml
