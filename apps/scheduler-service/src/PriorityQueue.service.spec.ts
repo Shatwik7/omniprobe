@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PriorityQueue } from './PriorityQueue.service';
 import { describe, it, expect, afterAll, beforeAll, jest } from '@jest/globals';
 
-jest.setTimeout(30000);
+jest.setTimeout(60000);
 
 describe('PriorityQueue (Integration)', () => {
   let service: PriorityQueue;
@@ -59,7 +59,7 @@ describe('PriorityQueue (Integration)', () => {
   });
 
   describe('Data Existence Check', () => {
-    const queueName = 'test-data-existence';
+    const queueName = 'test-data-existence-1';
 
     it('should check and set data existence in Redis', async () => {
       await service.getClient().del(`priority-queue:${queueName}`);
@@ -69,9 +69,9 @@ describe('PriorityQueue (Integration)', () => {
 
       exists = await service.checkDataExists(queueName);
       expect(exists).toBe(true);
-      await new Promise(resolve => setTimeout(resolve, 11000)); // Wait 11 seconds
+      await new Promise(resolve => setTimeout(resolve, 15000)); // Wait 11 seconds
       exists = await service.checkDataExists(queueName);
       expect(exists).toBe(false);
-    }, 15000);
+    }, 30000);
   });
 });

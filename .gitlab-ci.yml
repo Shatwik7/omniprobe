@@ -39,8 +39,8 @@ test_app:
     - export KAFKA_BROKERS=docker:9092
     - export KAFKA_URL=docker:9092
     - export PGHOST=docker
-    # Run unit tests
-    - npm run test:e2e -- --ci --forceExit --no-cache
+    # Run unit tests && e2e tests
+    - npm run test:ci
 
 
   after_script:

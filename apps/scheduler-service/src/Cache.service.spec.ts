@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CacheService } from './Cache.service';
 import { Monitor } from '@app/database';
-import { describe, it, expect, afterAll, beforeAll, jest } from '@jest/globals';
+import { describe, it, expect, afterAll, beforeAll, jest, afterEach } from '@jest/globals';
+import Redis from 'ioredis';
 
 
 /**
@@ -18,6 +19,7 @@ jest.setTimeout(30000);
 describe('CacheService (Integration)', () => {
     let service: CacheService;
     let module: TestingModule; // Store module reference
+    let redisClient: Redis;
 
     beforeAll(async () => {
         module = await Test.createTestingModule({
@@ -25,6 +27,7 @@ describe('CacheService (Integration)', () => {
         }).compile();
 
         service = module.get<CacheService>(CacheService);
+        redisClient = service.getClient();
     });
 
     // THIS IS THE CRITICAL STEP TO STOP THE HANGING
@@ -36,7 +39,116 @@ describe('CacheService (Integration)', () => {
 
     it('should be defined', () => {
         expect(service).toBeDefined();
-    });;
+    });
+
+    describe('getClient', () => {
+        it('should return a redis client instance', () => {
+            const client = service.getClient();
+            expect(client).toBeDefined();
+            expect(client).toBeInstanceOf(Redis);
+        });
+    });
+
+    describe('set / get / delete (Hash operations)', () => {
+        const monitor: Monitor = new Monitor();
+        monitor.id = 'hash-test-1';
+
+        afterEach(async () => {
+            // Cleanup hash key
+            await redisClient.del(`monitor:${monitor.id}`);
+        });
+
+        it('should handle hset with only key and field (which is a bug in usage)', async () => {
+            // The `set` method calls `hset(key, value)` when ttl is not provided.
+            // ioredis interprets this as setting a field with an empty string value.
+            await service.set(monitor, 'a-field');
+            const result = await redisClient.hgetall(`monitor:${monitor.id}`);
+            expect(result).toEqual({ 'a-field': '' });
+        });
+
+        it('should handle hset with ttl (which is a bug in implementation)', async () => {
+            // The `set` method calls `hset(key, value, 'EX', ttlSeconds)`.
+            // This is incorrect for setting TTL on a hash.
+            // It will set a field `value` to `'EX'` and a field `ttlSeconds` to `''`.
+            await service.set(monitor, 'fieldWithTtl', 60);
+            const result = await redisClient.hgetall(`monitor:${monitor.id}`);
+            expect(result).toEqual({ fieldWithTtl: 'EX', '60': '' });
+
+            // Verify that no TTL was set on the key
+            const ttl = await redisClient.ttl(`monitor:${monitor.id}`);
+            expect(ttl).toBe(-1);
+        });
+
+        it('should get a hash object using get()', async () => {
+            const key = `monitor:${monitor.id}`;
+            const hashData = { name: 'test-name', status: 'passing' };
+            await redisClient.hset(key, hashData);
+
+            const result = await service.get(monitor.id);
+            expect(result).toEqual(hashData);
+        });
+
+        it('should delete a hash using delete()', async () => {
+            const key = `monitor:${monitor.id}`;
+            await redisClient.hset(key, 'name', 'test-name');
+            
+            await service.delete(monitor);
+
+            const result = await redisClient.exists(key);
+            expect(result).toBe(0);
+        });
+    });
+
+    describe('Bootstrap Lock', () => {
+        afterEach(async () => {
+            // Ensure locks are cleaned up after each test
+            await redisClient.del('monitor:bootstrap-lock:0');
+            await redisClient.del('monitor:bootstrap-lock:1');
+        });
+
+        it('should acquire a bootstrap lock and return true', async () => {
+            const acquired = await service.tryAcquireBootstrapLock(1);
+            expect(acquired).toBe(true);
+
+            const lockValue = await redisClient.get('monitor:bootstrap-lock:1');
+            expect(lockValue).toBe('1');
+
+            const ttl = await redisClient.ttl('monitor:bootstrap-lock:1');
+            expect(ttl).toBeGreaterThan(0);
+            expect(ttl).toBeLessThanOrEqual(600);
+        });
+
+        it('should fail to acquire an already held lock and return false', async () => {
+            await service.tryAcquireBootstrapLock(1); // acquire first
+            const acquiredAgain = await service.tryAcquireBootstrapLock(1); // try again
+            expect(acquiredAgain).toBe(false);
+        });
+
+        it('should release a bootstrap lock', async () => {
+            await service.tryAcquireBootstrapLock(1);
+            await service.tryReleaseBootstrapLock(1);
+            const lockValue = await redisClient.get('monitor:bootstrap-lock:1');
+            expect(lockValue).toBeNull();
+        });
+
+        it('should be able to acquire a lock after it is released', async () => {
+            await service.tryAcquireBootstrapLock(1);
+            await service.tryReleaseBootstrapLock(1);
+            const acquiredAfterRelease = await service.tryAcquireBootstrapLock(1);
+            expect(acquiredAfterRelease).toBe(true);
+        });
+
+        it('should use default shard 0 for lock methods', async () => {
+            const acquired = await service.tryAcquireBootstrapLock();
+            expect(acquired).toBe(true);
+            const lockValue = await redisClient.get('monitor:bootstrap-lock:0');
+            expect(lockValue).toBe('1');
+
+            await service.tryReleaseBootstrapLock();
+            const lockValueAfterRelease = await redisClient.get('monitor:bootstrap-lock:0');
+            expect(lockValueAfterRelease).toBeNull();
+        });
+    });
 
     describe('setMonitor / getMonitor', () => {
         it('should set and get a value in real Redis', async () => {

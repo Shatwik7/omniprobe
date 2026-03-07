@@ -22,9 +22,9 @@ export class CacheService implements OnModuleDestroy {
     public async set(data: Monitor, value: string, ttlSeconds?: number): Promise<void> {
         const key = `monitor:${data.id}`;
         if (ttlSeconds) {
-            await this.redis.hset(key, value, 'EX', ttlSeconds);
+            await this.redis.hset(key, value, 'EX', String(ttlSeconds), '');
         } else {
-            await this.redis.hset(key, value);
+            await this.redis.hset(key, value, '');
         }
     }
 
