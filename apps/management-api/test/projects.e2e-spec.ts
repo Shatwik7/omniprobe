@@ -28,7 +28,8 @@ describe('Projects (e2e, real app + real db)', () => {
     };
   };
 
-  const buildTeamName = () => `e2e-project-team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const buildTeamName = () =>
+    `e2e-project-team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const buildProjectPayload = () => ({
     name: `e2e-project-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
     description: 'Project description for e2e',

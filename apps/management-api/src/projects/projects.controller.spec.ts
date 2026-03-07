@@ -6,7 +6,6 @@ import { NotFoundException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
 
-
 describe('ProjectsController', () => {
   let controller: ProjectsController;
   let projectsService: {
@@ -65,7 +64,10 @@ describe('ProjectsController', () => {
       { user: { id: 'user-1' } },
     );
 
-    expect(projectsService.create).toHaveBeenCalledWith({ name: 'P1', description: 'Desc' }, 'team-1');
+    expect(projectsService.create).toHaveBeenCalledWith(
+      { name: 'P1', description: 'Desc' },
+      'team-1',
+    );
     expect(response).toEqual(created);
   });
 
@@ -73,7 +75,9 @@ describe('ProjectsController', () => {
     const projects = [{ id: 'project-1', name: 'P1' }];
     projectsService.findAll.mockReturnValueOnce(Promise.resolve(projects));
 
-    const response = await controller.findAll('team-1', { user: { id: 'user-1' } });
+    const response = await controller.findAll('team-1', {
+      user: { id: 'user-1' },
+    });
 
     expect(projectsService.findAll).toHaveBeenCalledWith('team-1', 'user-1');
     expect(response).toEqual(projects);
@@ -82,7 +86,9 @@ describe('ProjectsController', () => {
   it('findOne should throw NotFoundException when service returns null', async () => {
     projectsService.findOne.mockReturnValueOnce(Promise.resolve(null));
 
-    await expect(controller.findOne('project-1')).rejects.toThrow(NotFoundException);
+    await expect(controller.findOne('project-1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('findOne should return project when found', async () => {
@@ -106,7 +112,9 @@ describe('ProjectsController', () => {
   it('remove should delegate to projectsService.remove', async () => {
     projectsService.remove.mockReturnValueOnce(Promise.resolve(true));
 
-    const response = await controller.remove('project-1', { user: { id: 'user-1' } });
+    const response = await controller.remove('project-1', {
+      user: { id: 'user-1' },
+    });
 
     expect(projectsService.remove).toHaveBeenCalledWith('project-1', 'user-1');
     expect(response).toBe(true);

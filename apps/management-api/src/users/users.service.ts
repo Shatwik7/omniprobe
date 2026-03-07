@@ -11,13 +11,17 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  findAll(page:number, limit: number) {
-    const users=this.usersRepository.find({relations:["createdTeams","teams"],skip:page*limit,take:limit});
-    return ;
+  findAll(page: number, limit: number) {
+    const users = this.usersRepository.find({
+      relations: ['createdTeams', 'teams'],
+      skip: page * limit,
+      take: limit,
+    });
+    return;
   }
 
   findOne(id: string) {
-    const user=this.usersRepository.findOne({where:{id:id}})
+    const user = this.usersRepository.findOne({ where: { id: id } });
     return user;
   }
 
@@ -25,8 +29,8 @@ export class UsersService {
     return `This action updates a #${id} user`;
   }
 
-  async remove(id: string) :Promise<Boolean>{
-    const user=await this.usersRepository.delete({id:id});
-    return user.affected!=null && user.affected > 0 ? true : false;
+  async remove(id: string): Promise<boolean> {
+    const user = await this.usersRepository.delete({ id: id });
+    return user.affected != null && user.affected > 0 ? true : false;
   }
 }

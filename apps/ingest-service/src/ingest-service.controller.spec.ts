@@ -44,7 +44,6 @@ describe('IngestServiceController', () => {
    */
   describe('handleCheckExecutionCompleted', () => {
     it('should call the service to handle check completion', async () => {
-
       const event = {
         Request: {
           id: VALID_UUID,
@@ -65,7 +64,7 @@ describe('IngestServiceController', () => {
           server_processing_time: 1,
           status_code: 200,
         },
-        region:'IN'
+        region: 'IN',
       };
 
       await controller.handleCheckExecutionCompleted(event);
@@ -80,7 +79,6 @@ describe('IngestServiceController', () => {
     });
 
     it('should not call the service if the message is invalid', async () => {
-
       const event = {
         Request: {
           id: 'not-a-uuid',
@@ -101,7 +99,7 @@ describe('IngestServiceController', () => {
           server_processing_time: 1,
           status_code: 200,
         },
-        region:'IN'
+        region: 'IN',
       };
 
       await controller.handleCheckExecutionCompleted(event);
@@ -115,7 +113,6 @@ describe('IngestServiceController', () => {
    */
   describe('handleCheckExecutionFailed', () => {
     it('should call the service to handle check failure', async () => {
-
       const event = {
         Request: {
           id: VALID_UUID,
@@ -131,7 +128,7 @@ describe('IngestServiceController', () => {
           timestamp: Date.now(),
           url: 'http://example.com',
         },
-        region:'IN'
+        region: 'IN',
       };
 
       await controller.handleCheckExecutionFailed(event);
@@ -145,7 +142,6 @@ describe('IngestServiceController', () => {
     });
 
     it('should not call the service if the message is invalid', async () => {
-
       const event = {
         Request: {
           id: 'bad-id',
@@ -161,7 +157,7 @@ describe('IngestServiceController', () => {
           timestamp: Date.now(),
           url: 'http://example.com',
         },
-        region:'IN',
+        region: 'IN',
       };
 
       await controller.handleCheckExecutionFailed(event);

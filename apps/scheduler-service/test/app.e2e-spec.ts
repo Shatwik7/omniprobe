@@ -2,7 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { SchedulerServiceModule } from './../src/scheduler-service.module';
 import { CheckSchedulerService } from './../src/CheckScheduler.service';
-import { describe, beforeEach, afterEach, it, expect, jest } from '@jest/globals';
+import {
+  describe,
+  beforeEach,
+  afterEach,
+  it,
+  expect,
+  jest,
+} from '@jest/globals';
 
 jest.mock('kafkajs', () => {
   const events = {
@@ -43,12 +50,10 @@ describe('SchedulerServiceController (e2e)', () => {
       imports: [SchedulerServiceModule],
     });
 
-    moduleBuilder
-      .overrideProvider(CheckSchedulerService)
-      .useValue({
-        onModuleInit: jest.fn(),
-        processDueMonitors: jest.fn(),
-      });
+    moduleBuilder.overrideProvider(CheckSchedulerService).useValue({
+      onModuleInit: jest.fn(),
+      processDueMonitors: jest.fn(),
+    });
 
     const moduleFixture: TestingModule = await moduleBuilder.compile();
 

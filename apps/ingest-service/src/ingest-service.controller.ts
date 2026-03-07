@@ -4,7 +4,7 @@ import { ClientKafka, EventPattern, Payload } from '@nestjs/microservices';
 import {
   CheckExecutionCompletedEvent,
   CheckExecutionFailedEvent,
-  Topics
+  Topics,
 } from '@app/kafka-topics';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
@@ -14,12 +14,14 @@ export class IngestServiceController {
   constructor(
     private readonly ingestServiceService: IngestServiceService,
     @Inject('KAFKA_PRODUCER') private readonly kafkaClient: ClientKafka,
-  ) { }
+  ) {}
 
-  private toCheckExecutionCompletedEvent(data: unknown): CheckExecutionCompletedEvent | null {
+  private toCheckExecutionCompletedEvent(
+    data: unknown,
+  ): CheckExecutionCompletedEvent | null {
     let parsedData: unknown = data;
 
-    if (typeof parsedData === "string") {
+    if (typeof parsedData === 'string') {
       try {
         parsedData = JSON.parse(parsedData);
       } catch {
@@ -27,17 +29,23 @@ export class IngestServiceController {
       }
     }
 
-    if (!parsedData || typeof parsedData !== "object" || Array.isArray(parsedData)) {
+    if (
+      !parsedData ||
+      typeof parsedData !== 'object' ||
+      Array.isArray(parsedData)
+    ) {
       return null;
     }
 
     return plainToInstance(CheckExecutionCompletedEvent, parsedData);
   }
 
-  private toCheckExecutionFailedEvent(data: unknown): CheckExecutionFailedEvent | null {
+  private toCheckExecutionFailedEvent(
+    data: unknown,
+  ): CheckExecutionFailedEvent | null {
     let parsedData: unknown = data;
 
-    if (typeof parsedData === "string") {
+    if (typeof parsedData === 'string') {
       try {
         parsedData = JSON.parse(parsedData);
       } catch {
@@ -45,7 +53,11 @@ export class IngestServiceController {
       }
     }
 
-    if (!parsedData || typeof parsedData !== "object" || Array.isArray(parsedData)) {
+    if (
+      !parsedData ||
+      typeof parsedData !== 'object' ||
+      Array.isArray(parsedData)
+    ) {
       return null;
     }
 
@@ -54,13 +66,12 @@ export class IngestServiceController {
 
   @EventPattern(Topics.CHECK_EXECUTION_COMPLETED)
   async handleCheckExecutionCompleted(@Payload() message: unknown) {
-
     const data = this.toCheckExecutionCompletedEvent(message);
     if (!data) return;
 
     const errors = await validate(data);
     if (errors.length > 0) {
-      console.log("❌ Invalid message. Skipping.");
+      console.log('❌ Invalid message. Skipping.');
       return;
     }
 
@@ -69,13 +80,12 @@ export class IngestServiceController {
 
   @EventPattern(Topics.CHECK_EXECUTION_FAILED)
   async handleCheckExecutionFailed(@Payload() message: unknown) {
-
     const data = this.toCheckExecutionFailedEvent(message);
     if (!data) return;
 
     const errors = await validate(data);
     if (errors.length > 0) {
-      console.log("❌ Invalid message. Skipping.");
+      console.log('❌ Invalid message. Skipping.');
       return;
     }
 

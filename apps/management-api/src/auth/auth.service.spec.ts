@@ -81,7 +81,9 @@ describe('AuthService (unit-style, real dependencies)', () => {
     const first = await authService.register(payload);
     createdUserIds.push(first.id as string);
 
-    await expect(authService.register(payload)).rejects.toThrow(UnauthorizedException);
+    await expect(authService.register(payload)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('validateEmailPassword should return user for valid credentials', async () => {

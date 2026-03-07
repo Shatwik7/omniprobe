@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AlertEngineController } from './alert-engine.controller';
 import { AlertEngineService } from './alert-engine.service';
-import {describe, beforeEach, it, expect} from '@jest/globals';
-
+import { describe, beforeEach, it, expect } from '@jest/globals';
 
 describe('AlertEngineController', () => {
   let alertEngineController: AlertEngineController;
@@ -13,7 +12,9 @@ describe('AlertEngineController', () => {
       providers: [AlertEngineService],
     }).compile();
 
-    alertEngineController = app.get<AlertEngineController>(AlertEngineController);
+    alertEngineController = app.get<AlertEngineController>(
+      AlertEngineController,
+    );
   });
 
   describe('root', () => {

@@ -2,12 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsService } from './teams.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Team } from '@app/database';
-import {describe, beforeEach, it, expect, jest} from '@jest/globals';
+import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { Repository } from 'typeorm';
 
 describe('TeamsService', () => {
   let service: TeamsService;
-  let repository: Pick<Repository<Team>, 'create' | 'save' | 'findAndCount' | 'findOne' | 'update' | 'delete'>;
+  let repository: Pick<
+    Repository<Team>,
+    'create' | 'save' | 'findAndCount' | 'findOne' | 'update' | 'delete'
+  >;
 
   const teamsRepositoryMock = {
     create: jest.fn(),
@@ -64,7 +67,9 @@ describe('TeamsService', () => {
 
   it('findAll should return teams and count for member user', async () => {
     const teams = [{ id: 'team-1', name: 'Ops' }] as Team[];
-    teamsRepositoryMock.findAndCount.mockReturnValueOnce(Promise.resolve([teams, 1]));
+    teamsRepositoryMock.findAndCount.mockReturnValueOnce(
+      Promise.resolve([teams, 1]),
+    );
 
     const response = await service.findAll('user-1');
 
@@ -110,19 +115,28 @@ describe('TeamsService', () => {
 
   it('update should delegate to repository.update', async () => {
     const updateResult = { affected: 1 };
-    teamsRepositoryMock.update.mockReturnValueOnce(Promise.resolve(updateResult));
+    teamsRepositoryMock.update.mockReturnValueOnce(
+      Promise.resolve(updateResult),
+    );
 
     const response = await service.update('team-1', { name: 'Renamed' });
 
-    expect(repository.update).toHaveBeenCalledWith('team-1', { name: 'Renamed' });
+    expect(repository.update).toHaveBeenCalledWith('team-1', {
+      name: 'Renamed',
+    });
     expect(response).toEqual(updateResult);
   });
 
   it('remove should return true when delete affects rows', async () => {
-    const team = { id: 'team-1', members: [{ id: 'user-1' }] } as unknown as Team;
+    const team = {
+      id: 'team-1',
+      members: [{ id: 'user-1' }],
+    } as unknown as Team;
     teamsRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve(team));
     teamsRepositoryMock.save.mockReturnValueOnce(Promise.resolve(team));
-    teamsRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    teamsRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
     const response = await service.remove('team-1');
 
@@ -130,7 +144,9 @@ describe('TeamsService', () => {
       where: { id: 'team-1' },
       relations: ['members'],
     });
-    expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ members: [] }));
+    expect(repository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ members: [] }),
+    );
     expect(repository.delete).toHaveBeenCalledWith({ id: 'team-1' });
     expect(response).toBe(true);
   });
@@ -145,10 +161,15 @@ describe('TeamsService', () => {
   });
 
   it('remove should return false when delete affects no rows', async () => {
-    const team = { id: 'team-1', members: [{ id: 'user-1' }] } as unknown as Team;
+    const team = {
+      id: 'team-1',
+      members: [{ id: 'user-1' }],
+    } as unknown as Team;
     teamsRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve(team));
     teamsRepositoryMock.save.mockReturnValueOnce(Promise.resolve(team));
-    teamsRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 0 }));
+    teamsRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 0 }),
+    );
 
     const response = await service.remove('team-1');
 

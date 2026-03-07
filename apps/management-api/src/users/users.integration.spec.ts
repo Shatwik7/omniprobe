@@ -51,11 +51,17 @@ describe('Users Integration (controller + service + auth contract)', () => {
   });
 
   it('signup and signin should use auth service contract', async () => {
-    const dto = { name: 'Integration', email: 'i@test.com', password: 'secret123' };
+    const dto = {
+      name: 'Integration',
+      email: 'i@test.com',
+      password: 'secret123',
+    };
     const user = { id: 'i-1', name: 'Integration', email: 'i@test.com' };
 
     authService.register.mockReturnValueOnce(Promise.resolve(user));
-    authService.createAccessToken.mockReturnValueOnce({ access_token: 'token-1' });
+    authService.createAccessToken.mockReturnValueOnce({
+      access_token: 'token-1',
+    });
 
     const signupResponse = await controller.create(dto);
     const signinResponse = controller.login({ user: user as User });

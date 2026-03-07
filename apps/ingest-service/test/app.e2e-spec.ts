@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { IngestServiceModule } from './../src/ingest-service.module';
-import {describe, beforeEach, it, expect, afterAll } from '@jest/globals';
+import { describe, beforeEach, it, expect, afterAll } from '@jest/globals';
 
 describe('IngestServiceController (e2e)', () => {
   let app: INestApplication;
@@ -22,5 +22,4 @@ describe('IngestServiceController (e2e)', () => {
   afterAll(async () => {
     await app.close();
   });
-
 });

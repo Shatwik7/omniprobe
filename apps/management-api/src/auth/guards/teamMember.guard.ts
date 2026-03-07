@@ -1,9 +1,9 @@
-import { 
-  CanActivate, 
-  ExecutionContext, 
-  Injectable, 
-  ForbiddenException, 
-  BadRequestException 
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -27,7 +27,7 @@ export class TeamMemberGuard implements CanActivate {
     const user = request.user;
     const teamId = request.params.teamId;
     const authenticatedUserId = user?.id ?? user?.userId;
-    
+
     if (!authenticatedUserId) {
       throw new ForbiddenException('User not authenticated');
     }
@@ -40,7 +40,7 @@ export class TeamMemberGuard implements CanActivate {
     const team = await this.teamRepo.findOne({
       where: [
         { id: teamId, members: { id: authenticatedUserId } },
-        { id: teamId, createdBy: { id: authenticatedUserId } }
+        { id: teamId, createdBy: { id: authenticatedUserId } },
       ],
     });
 

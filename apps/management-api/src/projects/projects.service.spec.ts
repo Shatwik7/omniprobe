@@ -6,7 +6,6 @@ import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { Repository } from 'typeorm';
 import { UnauthorizedException } from '@nestjs/common';
 
-
 describe('ProjectsService', () => {
   let service: ProjectsService;
   let projectsRepository: Pick<
@@ -24,7 +23,8 @@ describe('ProjectsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ProjectsService,
+      providers: [
+        ProjectsService,
         {
           provide: getRepositoryToken(Project),
           useValue: projectsRepositoryMock,
@@ -75,13 +75,17 @@ describe('ProjectsService', () => {
 
     const response = await service.findAll('team-1', 'user-1');
 
-    expect(projectsRepository.find).toHaveBeenCalledWith({ where: { team: { id: 'team-1' } } });
+    expect(projectsRepository.find).toHaveBeenCalledWith({
+      where: { team: { id: 'team-1' } },
+    });
     expect(response).toEqual(projects);
   });
 
   it('findOne should query with relations and selective fields', async () => {
     const project = { id: 'project-1', name: 'P1' } as Project;
-    projectsRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve(project));
+    projectsRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve(project),
+    );
 
     const response = await service.findOne('project-1');
 
@@ -129,17 +133,27 @@ describe('ProjectsService', () => {
 
   it('remove should throw when user is not owner', async () => {
     projectsRepositoryMock.findOne.mockReturnValueOnce(
-      Promise.resolve({ id: 'project-1', team: { createdBy: { id: 'owner-1' } } } as unknown as Project),
+      Promise.resolve({
+        id: 'project-1',
+        team: { createdBy: { id: 'owner-1' } },
+      } as unknown as Project),
     );
 
-    await expect(service.remove('project-1', 'user-2')).rejects.toThrow(UnauthorizedException);
+    await expect(service.remove('project-1', 'user-2')).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('remove should delete and return true for owner', async () => {
     projectsRepositoryMock.findOne.mockReturnValueOnce(
-      Promise.resolve({ id: 'project-1', team: { createdBy: { id: 'user-1' } } } as unknown as Project),
+      Promise.resolve({
+        id: 'project-1',
+        team: { createdBy: { id: 'user-1' } },
+      } as unknown as Project),
     );
-    projectsRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    projectsRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
     const response = await service.remove('project-1', 'user-1');
 

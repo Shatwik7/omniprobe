@@ -77,11 +77,16 @@ describe('Teams Integration (controller + service + repository)', () => {
       where: { members: { id: 'user-1' } },
       relations: ['members', 'createdBy'],
     });
-    expect(response).toEqual({ Teams: [{ id: 'team-1', name: 'Core Team' }], Count: 1 });
+    expect(response).toEqual({
+      Teams: [{ id: 'team-1', name: 'Core Team' }],
+      Count: 1,
+    });
   });
 
   it('findOne should flow from controller to repository.findOne', async () => {
-    repositoryMock.findOne.mockReturnValueOnce(Promise.resolve({ id: 'team-1', name: 'Core Team' }));
+    repositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'team-1', name: 'Core Team' }),
+    );
 
     const response = await controller.findOne('team-1');
 
@@ -92,22 +97,31 @@ describe('Teams Integration (controller + service + repository)', () => {
   it('update and remove should flow to repository update/delete', async () => {
     repositoryMock.update.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
     repositoryMock.findOne.mockReturnValueOnce(
-      Promise.resolve({ id: 'team-1', members: [{ id: 'user-1' }] } as unknown as Team),
+      Promise.resolve({
+        id: 'team-1',
+        members: [{ id: 'user-1' }],
+      } as unknown as Team),
     );
     repositoryMock.save.mockReturnValueOnce(
       Promise.resolve({ id: 'team-1', members: [] } as unknown as Team),
     );
     repositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
 
-    const updateResponse = await controller.update('team-1', { name: 'Updated Team' });
+    const updateResponse = await controller.update('team-1', {
+      name: 'Updated Team',
+    });
     const deleteResponse = await controller.remove('team-1');
 
-    expect(repository.update).toHaveBeenCalledWith('team-1', { name: 'Updated Team' });
+    expect(repository.update).toHaveBeenCalledWith('team-1', {
+      name: 'Updated Team',
+    });
     expect(repository.findOne).toHaveBeenCalledWith({
       where: { id: 'team-1' },
       relations: ['members'],
     });
-    expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ members: [] }));
+    expect(repository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ members: [] }),
+    );
     expect(repository.delete).toHaveBeenCalledWith({ id: 'team-1' });
     expect(updateResponse).toEqual({ affected: 1 });
     expect(deleteResponse).toBe(true);

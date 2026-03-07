@@ -15,7 +15,9 @@ export class LongPollingService implements OnModuleDestroy {
   private pubClient: Redis;
   private subClient: Redis;
 
-  constructor(@Inject(LONG_POLLING_OPTIONS) private options: LongPollingOptions) {
+  constructor(
+    @Inject(LONG_POLLING_OPTIONS) private options: LongPollingOptions,
+  ) {
     this.pubClient = new Redis(options.redisUrl);
     this.subClient = new Redis(options.redisUrl);
     this.setupSubscriber();
@@ -48,8 +50,11 @@ export class LongPollingService implements OnModuleDestroy {
     return new Promise((resolve) => {
       if (!this.observers.has(monitorId)) {
         this.observers.set(monitorId, []);
-        this.subClient.subscribe(`updates:monitor:${monitorId}`)
-          .catch(err => this.logger.error(`Subscribe failed: ${err.message}`));
+        this.subClient
+          .subscribe(`updates:monitor:${monitorId}`)
+          .catch((err) =>
+            this.logger.error(`Subscribe failed: ${err.message}`),
+          );
       }
 
       const waiters = this.observers.get(monitorId)!;
@@ -61,7 +66,6 @@ export class LongPollingService implements OnModuleDestroy {
       }, 30000);
 
       const originalResolve = resolve;
-
     });
   }
 
@@ -82,7 +86,9 @@ export class LongPollingService implements OnModuleDestroy {
 
     if (!waiters || waiters.length === 0) return;
 
-    this.logger.log(`Broadcasting update for Monitor ${monitorId} to ${waiters.length} clients.`);
+    this.logger.log(
+      `Broadcasting update for Monitor ${monitorId} to ${waiters.length} clients.`,
+    );
 
     waiters.forEach((resolve) => resolve(data));
 
@@ -104,7 +110,8 @@ export class LongPollingService implements OnModuleDestroy {
 
   private cleanupMonitor(monitorId: string) {
     this.observers.delete(monitorId);
-    this.subClient.unsubscribe(`updates:monitor:${monitorId}`)
-      .catch(err => this.logger.error(`Unsubscribe failed: ${err.message}`));
+    this.subClient
+      .unsubscribe(`updates:monitor:${monitorId}`)
+      .catch((err) => this.logger.error(`Unsubscribe failed: ${err.message}`));
   }
 }

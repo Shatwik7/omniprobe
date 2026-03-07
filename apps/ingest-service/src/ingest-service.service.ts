@@ -34,10 +34,9 @@ export class IngestServiceService {
   /**
    * COMPLETION EVENT
    * @param event CheckExecutionCompltedEvent (libs/kafka-topic)
-   * @returns 
+   * @returns
    */
   async handleCheckCompletion(event: CheckExecutionCompletedEvent) {
-
     const monitor = await this.monitorRepo.findOne({
       where: { id: event.Request.checkId, isActive: true, isLive: true },
       relations: ['alertPolicy'],
@@ -63,14 +62,12 @@ export class IngestServiceService {
     }
   }
 
-
   /**
    * FAILURE EVENT
    * @param event CheckExecutionFailedEvent (libs/kafka-topic)
-   * @returns 
+   * @returns
    */
   async handleCheckFailure(event: CheckExecutionFailedEvent) {
-
     const monitor = await this.monitorRepo.findOne({
       where: { id: event.Request.checkId, isActive: true, isLive: true },
       relations: ['alertPolicy'],
@@ -91,15 +88,20 @@ export class IngestServiceService {
    * VALIDATION LOGIC
    * @param monitor Monitor (libs/database)
    * @param event CheckExecutionCompletedEvent (libs/kafka-topic)
-   * @returns 
+   * @returns
    */
-  private isResponseValid(monitor: Monitor, event: CheckExecutionCompletedEvent) {
-    if (monitor.expectedStatus && event.Response.status_code !== monitor.expectedStatus)
+  private isResponseValid(
+    monitor: Monitor,
+    event: CheckExecutionCompletedEvent,
+  ) {
+    if (
+      monitor.expectedStatus &&
+      event.Response.status_code !== monitor.expectedStatus
+    )
       return false;
 
     return true;
   }
-
 
   /**
    * METRIC STORAGE
@@ -119,7 +121,7 @@ export class IngestServiceService {
       total_time_ms: event.Response.tdt,
       dns_response_time_ms: event.Response.dns_lookup_end,
       tcp_connection_time_ms: event.Response.tcp_end,
-      server_processing_time_ms:event.Response.server_processing_time,
+      server_processing_time_ms: event.Response.server_processing_time,
       tls_handshake_time_ms: event.Response.tls_end,
       time_to_first_byte_ms: event.Response.ttfb,
       content_transfer_time_ms: event.Response.server_processing_time,
@@ -143,11 +145,10 @@ export class IngestServiceService {
     await this.metricRepo.save(metric);
   }
 
-
   /**
    * Get Open Incident
-   * @param monitorId : UUID 
-   * @returns 
+   * @param monitorId : UUID
+   * @returns
    */
   private getOpenIncident(monitorId: string) {
     return this.incidentRepo.findOne({
@@ -155,11 +156,10 @@ export class IngestServiceService {
     });
   }
 
-
   /**
    * Create New Incident
    * @param monitor Monitor (libs/database)
-   * @param reason 
+   * @param reason
    */
   private async createIncident(monitor: Monitor, reason: string) {
     const incident = this.incidentRepo.create({
@@ -183,7 +183,6 @@ export class IngestServiceService {
    * @param incident Incident (libs/database)
    */
   private async resolveIncident(incident: Incident) {
-
     incident.status = IncidentStatus.RESOLVED;
     incident.resolvedAt = new Date();
 

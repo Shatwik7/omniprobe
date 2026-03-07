@@ -7,40 +7,37 @@ import { Team, User } from '@app/database';
 
 @Injectable()
 export class TeamsService {
-
   constructor(
     @InjectRepository(Team)
-    private readonly teamsRepo: Repository<Team>
-  ) { }
-
+    private readonly teamsRepo: Repository<Team>,
+  ) {}
 
   private getTeamById(id: string): Promise<Team | null> {
-    return this.teamsRepo.findOne(
-      {
-        where: { id: id },
-        relations: ["members", "projects", "createdBy"],
-        select: {
+    return this.teamsRepo.findOne({
+      where: { id: id },
+      relations: ['members', 'projects', 'createdBy'],
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        updatedAt: true,
+        members: {
           id: true,
           name: true,
-          createdAt: true,
-          updatedAt: true,
-          members: {
-            id: true,
-            name: true,
-            email: true,
-          },
-          createdBy: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        }
-      });
+          email: true,
+        },
+        createdBy: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    });
   }
 
   private checkIfIsMemberOfTeam(team: Team, userId: string): boolean {
     if (team.members == null || [] || undefined) return false;
-    team.members.forEach(user => {
+    team.members.forEach((user) => {
       if (user.id == userId) return true;
     });
     return false;
@@ -50,12 +47,12 @@ export class TeamsService {
     const Team = this.teamsRepo.create({
       name: name,
       createdBy: { id: userId },
-      members: [{ id: userId }]
+      members: [{ id: userId }],
     });
     return this.teamsRepo.save(Team);
   }
 
-  async findAll(userId: string): Promise<{ Teams: Team[], Count: number }> {
+  async findAll(userId: string): Promise<{ Teams: Team[]; Count: number }> {
     const [teams, count] = await this.teamsRepo.findAndCount({
       where: {
         members: {

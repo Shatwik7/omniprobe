@@ -8,7 +8,10 @@ import { IncidentSeverity, IncidentStatus } from '@app/database';
 
 describe('IncidentsService', () => {
   let service: IncidentsService;
-  let repository: Pick<Repository<Incident>, 'create' | 'save' | 'find' | 'findOne' | 'delete' | 'update'>;
+  let repository: Pick<
+    Repository<Incident>,
+    'create' | 'save' | 'find' | 'findOne' | 'delete' | 'update'
+  >;
 
   const incidentRepositoryMock = {
     create: jest.fn(),
@@ -81,17 +84,29 @@ describe('IncidentsService', () => {
 
     const response = await service.findAll('monitor-1');
 
-    expect(repository.find).toHaveBeenCalledWith({ where: { monitor: { id: 'monitor-1' } } });
+    expect(repository.find).toHaveBeenCalledWith({
+      where: { monitor: { id: 'monitor-1' } },
+    });
     expect(response).toEqual(incidents);
   });
 
   it('findOne should fetch incident by id', async () => {
     const incident = { id: 'incident-1' } as Incident;
-    incidentRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve(incident));
+    incidentRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve(incident),
+    );
 
     const response = await service.findOne('incident-1');
 
-    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'incident-1' }, relations: { acknowledgedBy: true, metric: true, monitor: true, notifications: true } });
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { id: 'incident-1' },
+      relations: {
+        acknowledgedBy: true,
+        metric: true,
+        monitor: true,
+        notifications: true,
+      },
+    });
     expect(response).toEqual(incident);
   });
 
@@ -102,7 +117,9 @@ describe('IncidentsService', () => {
   });
 
   it('remove should return true when row is deleted', async () => {
-    incidentRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    incidentRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
     const response = await service.remove('incident-1');
 
@@ -111,7 +128,9 @@ describe('IncidentsService', () => {
   });
 
   it('remove should return false when no rows are deleted', async () => {
-    incidentRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 0 }));
+    incidentRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 0 }),
+    );
 
     const response = await service.remove('incident-1');
 
@@ -119,7 +138,9 @@ describe('IncidentsService', () => {
   });
 
   it('acknowledge should update incident with acknowledged status and user', async () => {
-    incidentRepositoryMock.update.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    incidentRepositoryMock.update.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
     const response = await service.acknowledge('incident-1', 'user-1');
 
@@ -135,7 +156,9 @@ describe('IncidentsService', () => {
   });
 
   it('resolve should update incident with resolved status', async () => {
-    incidentRepositoryMock.update.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    incidentRepositoryMock.update.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
     const response = await service.resolve('incident-1');
 

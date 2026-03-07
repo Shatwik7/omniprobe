@@ -2,7 +2,14 @@ import 'reflect-metadata';
 import { Test, TestingModule } from '@nestjs/testing';
 import { LongPollingService, LongPollingOptions } from './long-polling.service';
 import { LONG_POLLING_OPTIONS } from './long-polling.constant';
-import {jest, describe, it, expect, beforeEach, afterEach} from '@jest/globals';
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 
 jest.mock('ioredis', () => {
   const MockRedis = require('ioredis-mock');
@@ -47,7 +54,6 @@ describe('LongPollingService', () => {
   });
 
   describe('waitForUpdates', () => {
-    
     it('should resolve with null after a timeout', async () => {
       const monitorId = 'test-monitor-timeout';
       const promise = service.waitForUpdates(monitorId);

@@ -14,6 +14,9 @@ import { CheckExecutionEventProducerService } from './KafkaProducer.service';
           client: {
             clientId: 'scheduler-producer',
             brokers: ['localhost:9092'],
+            retry: {
+              retries: 10,
+            }
           },
         },
       },
@@ -22,4 +25,4 @@ import { CheckExecutionEventProducerService } from './KafkaProducer.service';
   controllers: [WorkerController],
   providers: [CheckExecutorService, CheckExecutionEventProducerService],
 })
-export class WorkerServiceModule {}
+export class WorkerServiceModule { }

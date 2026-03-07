@@ -66,7 +66,9 @@ describe('IncidentsController', () => {
       monitorId: 'monitor-1',
       notifications: [],
     };
-    incidentsService.create.mockReturnValueOnce(Promise.resolve({ id: 'incident-1' }));
+    incidentsService.create.mockReturnValueOnce(
+      Promise.resolve({ id: 'incident-1' }),
+    );
 
     const response = await controller.create(dto as any);
 
@@ -75,7 +77,9 @@ describe('IncidentsController', () => {
   });
 
   it('findAll should delegate to incidentsService.findAll', async () => {
-    incidentsService.findAll.mockReturnValueOnce(Promise.resolve([{ id: 'incident-1' }]));
+    incidentsService.findAll.mockReturnValueOnce(
+      Promise.resolve([{ id: 'incident-1' }]),
+    );
 
     const response = await controller.findAll('monitor-1');
 
@@ -84,7 +88,9 @@ describe('IncidentsController', () => {
   });
 
   it('findOne should delegate to incidentsService.findOne', async () => {
-    incidentsService.findOne.mockReturnValueOnce(Promise.resolve({ id: 'incident-1' }));
+    incidentsService.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'incident-1' }),
+    );
 
     const response = await controller.findOne('incident-1');
 
@@ -97,7 +103,9 @@ describe('IncidentsController', () => {
 
     const response = controller.update('42', { summary: 'Updated' } as any);
 
-    expect(incidentsService.update).toHaveBeenCalledWith(42, { summary: 'Updated' });
+    expect(incidentsService.update).toHaveBeenCalledWith(42, {
+      summary: 'Updated',
+    });
     expect(response).toBe('updated');
   });
 
@@ -113,9 +121,16 @@ describe('IncidentsController', () => {
   it('acknowledge should delegate to incidentsService.acknowledge', async () => {
     incidentsService.acknowledge.mockReturnValueOnce(Promise.resolve(true));
 
-    const response = await controller.acknowledge('incident-1', { user: { id: 'user-1' } }, undefined);
+    const response = await controller.acknowledge(
+      'incident-1',
+      { user: { id: 'user-1' } },
+      undefined,
+    );
 
-    expect(incidentsService.acknowledge).toHaveBeenCalledWith('incident-1', 'user-1');
+    expect(incidentsService.acknowledge).toHaveBeenCalledWith(
+      'incident-1',
+      'user-1',
+    );
     expect(response).toBe(true);
   });
 

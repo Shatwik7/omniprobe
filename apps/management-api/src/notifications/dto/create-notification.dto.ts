@@ -1,8 +1,7 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsString, IsUUID } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateNotificationDto {
-
   @ApiProperty()
   @IsString()
   channel: string;
@@ -19,5 +18,4 @@ export class CreateNotificationDto {
   @ApiProperty()
   @IsUUID()
   incidentId: string;
-
 }

@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CheckExecutionEventProducerService } from './KafkaProducer.service';
 import { ClientKafka } from '@nestjs/microservices';
-import { CheckExecutionCompletedEvent, CheckExecutionFailedEvent, Topics } from '@app/kafka-topics';
+import {
+  CheckExecutionCompletedEvent,
+  CheckExecutionFailedEvent,
+  Topics,
+} from '@app/kafka-topics';
 import { of } from 'rxjs';
 import { expect, jest, describe, it, beforeEach } from '@jest/globals';
 
@@ -24,7 +28,9 @@ describe('CheckExecutionEventProducerService', () => {
       ],
     }).compile();
 
-    service = module.get<CheckExecutionEventProducerService>(CheckExecutionEventProducerService);
+    service = module.get<CheckExecutionEventProducerService>(
+      CheckExecutionEventProducerService,
+    );
     kafkaClient = module.get<ClientKafka>('KAFKA_PRODUCER');
   });
 
@@ -55,7 +61,10 @@ describe('CheckExecutionEventProducerService', () => {
 
       service.CheckFailed(data);
 
-      expect(kafkaClient.emit).toHaveBeenCalledWith(Topics.CHECK_EXECUTION_FAILED, data);
+      expect(kafkaClient.emit).toHaveBeenCalledWith(
+        Topics.CHECK_EXECUTION_FAILED,
+        data,
+      );
     });
   });
 
@@ -68,7 +77,10 @@ describe('CheckExecutionEventProducerService', () => {
 
       service.CheckCompleted(data);
 
-      expect(kafkaClient.emit).toHaveBeenCalledWith(Topics.CHECK_EXECUTION_COMPLETED, data);
+      expect(kafkaClient.emit).toHaveBeenCalledWith(
+        Topics.CHECK_EXECUTION_COMPLETED,
+        data,
+      );
     });
   });
 });

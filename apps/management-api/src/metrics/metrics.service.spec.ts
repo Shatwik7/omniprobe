@@ -1,13 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MetricsService } from './metrics.service';
-import {Metric, Monitor, Project} from '@app/database';
+import { Metric, Monitor, Project } from '@app/database';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { beforeEach, describe, it, expect, jest} from '@jest/globals';
+import { beforeEach, describe, it, expect, jest } from '@jest/globals';
 import { Repository, Between } from 'typeorm';
 
 describe('MetricsService', () => {
   let service: MetricsService;
-  let metricRepository: Pick<Repository<Metric>, 'create' | 'save' | 'find' | 'findOne' | 'delete'>;
+  let metricRepository: Pick<
+    Repository<Metric>,
+    'create' | 'save' | 'find' | 'findOne' | 'delete'
+  >;
   let monitorRepository: Pick<Repository<Monitor>, 'findOne'>;
 
   const metricRepositoryMock = {
@@ -24,7 +27,8 @@ describe('MetricsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MetricsService,
+      providers: [
+        MetricsService,
         {
           provide: getRepositoryToken(Monitor),
           useValue: monitorRepositoryMock,
@@ -36,7 +40,7 @@ describe('MetricsService', () => {
         {
           provide: getRepositoryToken(Metric),
           useValue: metricRepositoryMock,
-        }
+        },
       ],
     }).compile();
 
@@ -57,9 +61,14 @@ describe('MetricsService', () => {
   });
 
   it('checkMonitorInProject should return false when monitor exists in project', async () => {
-    monitorRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve({ id: 'monitor-1' }));
+    monitorRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'monitor-1' }),
+    );
 
-    const response = await service.checkMonitorInProject('monitor-1', 'project-1');
+    const response = await service.checkMonitorInProject(
+      'monitor-1',
+      'project-1',
+    );
 
     expect(monitorRepository.findOne).toHaveBeenCalledWith({
       where: { id: 'monitor-1', project: { id: 'project-1' } },
@@ -70,7 +79,10 @@ describe('MetricsService', () => {
   it('checkMonitorInProject should return true when monitor is missing', async () => {
     monitorRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve(null));
 
-    const response = await service.checkMonitorInProject('monitor-1', 'project-1');
+    const response = await service.checkMonitorInProject(
+      'monitor-1',
+      'project-1',
+    );
 
     expect(response).toBe(true);
   });
@@ -119,9 +131,16 @@ describe('MetricsService', () => {
   it('findAll should filter by monitor and date range in descending order', async () => {
     const beginDate = new Date('2026-01-01T00:00:00.000Z');
     const endDate = new Date('2026-01-02T00:00:00.000Z');
-    metricRepositoryMock.find.mockReturnValueOnce(Promise.resolve([{ id: 'metric-1' }]));
+    metricRepositoryMock.find.mockReturnValueOnce(
+      Promise.resolve([{ id: 'metric-1' }]),
+    );
 
-    const response = await service.findAll('monitor-1', beginDate, endDate, 'IN');
+    const response = await service.findAll(
+      'monitor-1',
+      beginDate,
+      endDate,
+      'IN',
+    );
 
     expect(metricRepository.find).toHaveBeenCalledWith({
       where: {
@@ -163,12 +182,16 @@ describe('MetricsService', () => {
 
     const response = await service.update('metric-1', { statusCode: 500 });
 
-    expect(metricRepository.save).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 500 }));
+    expect(metricRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 500 }),
+    );
     expect(response).toEqual(saved);
   });
 
   it('remove should return true when delete affects rows', async () => {
-    metricRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    metricRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
     const response = await service.remove('metric-1');
 
@@ -177,7 +200,9 @@ describe('MetricsService', () => {
   });
 
   it('remove should return false when delete affects no rows', async () => {
-    metricRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 0 }));
+    metricRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 0 }),
+    );
 
     const response = await service.remove('metric-1');
 

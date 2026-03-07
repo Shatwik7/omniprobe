@@ -7,7 +7,6 @@ import { NotAcceptableException, NotFoundException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
 
-
 describe('MetricsController', () => {
   let controller: MetricsController;
   let metricsService: {
@@ -48,7 +47,7 @@ describe('MetricsController', () => {
         {
           provide: MetricsService,
           useValue: metricsServiceMock,
-        }
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -90,8 +89,12 @@ describe('MetricsController', () => {
       isSuccess: true,
       monitorId: 'monitor-1',
     };
-    metricsService.create.mockReturnValueOnce(Promise.resolve({ id: 'metric-1' }));
-    pollingService.publishUpdate.mockReturnValueOnce(Promise.resolve(undefined));
+    metricsService.create.mockReturnValueOnce(
+      Promise.resolve({ id: 'metric-1' }),
+    );
+    pollingService.publishUpdate.mockReturnValueOnce(
+      Promise.resolve(undefined),
+    );
 
     const response = await controller.create(dto);
 
@@ -101,35 +104,64 @@ describe('MetricsController', () => {
   });
 
   it('findAll should throw when monitor does not belong to project', async () => {
-    metricsService.checkMonitorInProject.mockReturnValueOnce(Promise.resolve(true));
+    metricsService.checkMonitorInProject.mockReturnValueOnce(
+      Promise.resolve(true),
+    );
 
     await expect(
-      controller.findAll('monitor-1', 'project-1', new Date(), new Date(), 'IN'),
+      controller.findAll(
+        'monitor-1',
+        'project-1',
+        new Date(),
+        new Date(),
+        'IN',
+      ),
     ).rejects.toThrow(NotAcceptableException);
   });
 
   it('findAll should delegate when monitor belongs to project', async () => {
     const beginDate = new Date('2026-01-01T00:00:00.000Z');
     const endDate = new Date('2026-01-02T00:00:00.000Z');
-    metricsService.checkMonitorInProject.mockReturnValueOnce(Promise.resolve(false));
-    metricsService.findAll.mockReturnValueOnce(Promise.resolve([{ id: 'metric-1' }]));
+    metricsService.checkMonitorInProject.mockReturnValueOnce(
+      Promise.resolve(false),
+    );
+    metricsService.findAll.mockReturnValueOnce(
+      Promise.resolve([{ id: 'metric-1' }]),
+    );
 
-    const response = await controller.findAll('monitor-1', 'project-1', beginDate, endDate, 'IN');
+    const response = await controller.findAll(
+      'monitor-1',
+      'project-1',
+      beginDate,
+      endDate,
+      'IN',
+    );
 
-    expect(metricsService.findAll).toHaveBeenCalledWith('monitor-1', beginDate, endDate, 'IN');
+    expect(metricsService.findAll).toHaveBeenCalledWith(
+      'monitor-1',
+      beginDate,
+      endDate,
+      'IN',
+    );
     expect(response).toEqual([{ id: 'metric-1' }]);
   });
 
   it('poll should throw not found when waitForUpdates returns null', async () => {
-    metricsService.checkMonitorInProject.mockReturnValueOnce(Promise.resolve(false));
+    metricsService.checkMonitorInProject.mockReturnValueOnce(
+      Promise.resolve(false),
+    );
     pollingService.waitForUpdates.mockReturnValueOnce(Promise.resolve(null));
 
-    await expect(controller.poll('monitor-1', 'project-1')).rejects.toThrow(NotFoundException);
+    await expect(controller.poll('monitor-1', 'project-1')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('poll should return data when updates are available', async () => {
     const payload = { id: 'metric-1' };
-    metricsService.checkMonitorInProject.mockReturnValueOnce(Promise.resolve(false));
+    metricsService.checkMonitorInProject.mockReturnValueOnce(
+      Promise.resolve(false),
+    );
     pollingService.waitForUpdates.mockReturnValueOnce(Promise.resolve(payload));
 
     const response = await controller.poll('monitor-1', 'project-1');
@@ -138,8 +170,12 @@ describe('MetricsController', () => {
   });
 
   it('findOne/update/remove should delegate to service', async () => {
-    metricsService.findOne.mockReturnValueOnce(Promise.resolve({ id: 'metric-1' }));
-    metricsService.update.mockReturnValueOnce(Promise.resolve({ id: 'metric-1', statusCode: 500 }));
+    metricsService.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'metric-1' }),
+    );
+    metricsService.update.mockReturnValueOnce(
+      Promise.resolve({ id: 'metric-1', statusCode: 500 }),
+    );
     metricsService.remove.mockReturnValueOnce(Promise.resolve(true));
 
     const found = await controller.findOne('metric-1');

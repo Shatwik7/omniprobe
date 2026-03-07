@@ -7,19 +7,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class ProjectsService {
-
   constructor(
     @InjectRepository(Project)
     private readonly projectsRepo: Repository<Project>,
 
     @InjectRepository(Team)
-    private readonly teamsRepo: Repository<Team>
-  ) {
-  }
+    private readonly teamsRepo: Repository<Team>,
+  ) {}
 
-
-  create(createProjectDto: CreateProjectDto,teamId:string): Promise<Project> {
-    const project = this.projectsRepo.create({ name: createProjectDto.name, team:{id:teamId}, description: createProjectDto.description});
+  create(createProjectDto: CreateProjectDto, teamId: string): Promise<Project> {
+    const project = this.projectsRepo.create({
+      name: createProjectDto.name,
+      team: { id: teamId },
+      description: createProjectDto.description,
+    });
     return this.projectsRepo.save(project);
   }
 
@@ -40,7 +41,7 @@ export class ProjectsService {
           id: true,
           members: {
             id: true,
-          }
+          },
         },
         monitors: {
           id: true,
@@ -48,9 +49,9 @@ export class ProjectsService {
           target: true,
           method: true,
           frequencySeconds: true,
-        }
+        },
       },
-      relations: ['team', 'monitors']
+      relations: ['team', 'monitors'],
     });
     return project;
   }
@@ -60,11 +61,10 @@ export class ProjectsService {
   }
 
   async remove(id: string, userId: string): Promise<boolean> {
-    const project = await this.projectsRepo.findOne(
-      {
-        where: { id },
-        relations: ['team', 'team.createdBy'],
-      });
+    const project = await this.projectsRepo.findOne({
+      where: { id },
+      relations: ['team', 'team.createdBy'],
+    });
 
     if (!project) {
       return false;

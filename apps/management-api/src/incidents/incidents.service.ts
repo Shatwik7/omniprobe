@@ -9,9 +9,8 @@ import { Incident, IncidentStatus } from '@app/database';
 export class IncidentsService {
   constructor(
     @InjectRepository(Incident)
-    private readonly IncidentRepo: Repository<Incident>
-  ) { }
-
+    private readonly IncidentRepo: Repository<Incident>,
+  ) {}
 
   create(createIncidentDto: CreateIncidentDto) {
     const Incident = this.IncidentRepo.create({
@@ -23,8 +22,10 @@ export class IncidentsService {
       startedAt: createIncidentDto.startedAt,
       acknowledgedBy: { id: createIncidentDto.acknowledgedBy },
       monitor: { id: createIncidentDto.monitorId },
-      notifications: createIncidentDto.notifications.map(notif => ({ id: notif }))
-    })
+      notifications: createIncidentDto.notifications.map((notif) => ({
+        id: notif,
+      })),
+    });
     return this.IncidentRepo.save(Incident);
   }
 
@@ -39,8 +40,8 @@ export class IncidentsService {
         acknowledgedBy: true,
         monitor: true,
         metric: true,
-        notifications: true
-      }
+        notifications: true,
+      },
     });
   }
 
@@ -54,8 +55,9 @@ export class IncidentsService {
       {
         acknowledgedAt: new Date().toISOString(),
         acknowledgedBy: { id: userId },
-        status: IncidentStatus.ACKNOWLEDGED
-      });
+        status: IncidentStatus.ACKNOWLEDGED,
+      },
+    );
   }
 
   resolve(incidentId: string) {
@@ -63,13 +65,15 @@ export class IncidentsService {
       { id: incidentId },
       {
         resolvedAt: new Date().toISOString(),
-        status: IncidentStatus.RESOLVED
-      });
+        status: IncidentStatus.RESOLVED,
+      },
+    );
   }
 
-  async remove(incidentId: string): Promise<Boolean> {
+  async remove(incidentId: string): Promise<boolean> {
     const incident = await this.IncidentRepo.delete({ id: incidentId });
-    const res = incident.affected != null && incident.affected > 0 ? true : false;
+    const res =
+      incident.affected != null && incident.affected > 0 ? true : false;
     return res;
   }
 }

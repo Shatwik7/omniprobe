@@ -5,7 +5,7 @@ import { AuthService } from '../auth/auth.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '@app/database';
 import { ForbiddenException } from '@nestjs/common';
-import {jest, describe, it, expect, beforeEach} from '@jest/globals';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 describe('UsersController', () => {
   let controller: UsersController;
@@ -16,7 +16,9 @@ describe('UsersController', () => {
     remove: jest.Mock;
   };
   let authService: {
-    register: jest.Mock<(dto: any) => Promise<{ id: string; name: string; email: string }>>;
+    register: jest.Mock<
+      (dto: any) => Promise<{ id: string; name: string; email: string }>
+    >;
     createAccessToken: jest.Mock;
   };
 
@@ -28,7 +30,8 @@ describe('UsersController', () => {
   };
 
   const authServiceMock = {
-    register: jest.fn<() => Promise<{ id: string; name: string; email: string }>>(),
+    register:
+      jest.fn<() => Promise<{ id: string; name: string; email: string }>>(),
     createAccessToken: jest.fn(),
   };
 

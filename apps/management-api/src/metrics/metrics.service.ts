@@ -7,7 +7,6 @@ import { Between, In, Repository } from 'typeorm';
 
 @Injectable()
 export class MetricsService {
-
   constructor(
     @InjectRepository(Metric)
     private readonly metricRepository: Repository<Metric>,
@@ -16,14 +15,17 @@ export class MetricsService {
     private readonly monitorRepository: Repository<Monitor>,
 
     @InjectRepository(Project)
-    private readonly projectRepository: Repository<Project>
+    private readonly projectRepository: Repository<Project>,
   ) {}
 
-  async checkMonitorInProject(monitorId:string, projectId:string):Promise<boolean>{
-    const monitor=await this.monitorRepository.findOne({
-      where:{id:monitorId, project:{id:projectId}}
+  async checkMonitorInProject(
+    monitorId: string,
+    projectId: string,
+  ): Promise<boolean> {
+    const monitor = await this.monitorRepository.findOne({
+      where: { id: monitorId, project: { id: projectId } },
     });
-    if(!monitor){
+    if (!monitor) {
       return true;
     }
     return false;
@@ -38,24 +40,34 @@ export class MetricsService {
     return this.metricRepository.save(metric);
   }
 
-  findAll(monitorId: string, beginDate: Date, endDate: Date, region: string): Promise<Metric[]> {
-
+  findAll(
+    monitorId: string,
+    beginDate: Date,
+    endDate: Date,
+    region: string,
+  ): Promise<Metric[]> {
     return this.metricRepository.find({
       where: {
-        monitor:{id:monitorId},
+        monitor: { id: monitorId },
         createdAt: Between(beginDate, endDate),
       },
       order: {
-        createdAt: "DESC"
+        createdAt: 'DESC',
       },
     });
   }
 
   findOne(id: string): Promise<Metric | null> {
-    return this.metricRepository.findOne({ where: { id }, relations: ['monitor'] });
+    return this.metricRepository.findOne({
+      where: { id },
+      relations: ['monitor'],
+    });
   }
 
-  async update(id: string, updateMetricDto: UpdateMetricDto): Promise<Metric | null> {
+  async update(
+    id: string,
+    updateMetricDto: UpdateMetricDto,
+  ): Promise<Metric | null> {
     const metric = await this.findOne(id);
     if (!metric) {
       return null;

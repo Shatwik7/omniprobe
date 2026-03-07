@@ -5,7 +5,9 @@ import { LONG_POLLING_OPTIONS } from './long-polling.constant';
 export interface LongPollingModuleAsyncOptions {
   imports?: any[];
   inject?: any[];
-  useFactory: (...args: any[]) => Promise<LongPollingOptions> | LongPollingOptions;
+  useFactory: (
+    ...args: any[]
+  ) => Promise<LongPollingOptions> | LongPollingOptions;
 }
 
 @Global()

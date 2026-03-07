@@ -27,19 +27,24 @@ export default tseslint.config(
         ecmaFeatures: {
           legacyDecorators: true
         },
+        project: ['./tsconfig.json', './apps/*/tsconfig.json', './libs/*/tsconfig.json'],
+        tsconfigRootDir: import.meta.dirname
       },
     },
   },
   {
     rules: {
-       '@typescript-eslint/no-unused-vars': ['error'],
       // This allows property decorators like @Column()
       '@typescript-eslint/explicit-member-accessibility': ['off'],
       '@typescript-eslint/no-explicit-any': 'off',
       'prettier/prettier': "off",
       "@typescript-eslint": "off",
       '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn'
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn'],
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
     },
   },
 );

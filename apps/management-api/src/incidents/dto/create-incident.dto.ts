@@ -1,22 +1,42 @@
-import { IncidentSeverity, IncidentStatus } from "@app/database";
-import { ApiProperty } from "@nestjs/swagger";
-import { IsDate, IsEnum, IsInt, IsOptional, IsString, IsUrl, IsUUID } from "class-validator";
+import { IncidentSeverity, IncidentStatus } from '@app/database';
+import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsDate,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateIncidentDto {
-
-  @ApiProperty({type:"string",description:'Status of the incident : enums["OPEN", "ACKNOWLEDGED", "RESOLVED]',enum:IncidentStatus})
-  @IsEnum(IncidentStatus, { message: 'Invalid status : ["OPEN", "ACKNOWLEDGED", "RESOLVED]' })
+  @ApiProperty({
+    type: 'string',
+    description:
+      'Status of the incident : enums["OPEN", "ACKNOWLEDGED", "RESOLVED]',
+    enum: IncidentStatus,
+  })
+  @IsEnum(IncidentStatus, {
+    message: 'Invalid status : ["OPEN", "ACKNOWLEDGED", "RESOLVED]',
+  })
   status: IncidentStatus;
 
-  @ApiProperty({type:"string",description:'Status of the incident : enums["CRITICAL", "WARNING]',enum:IncidentSeverity})
-  @IsEnum(IncidentSeverity, { message: 'Invalid severity : ["CRITICAL", "WARNING]' })
+  @ApiProperty({
+    type: 'string',
+    description: 'Status of the incident : enums["CRITICAL", "WARNING]',
+    enum: IncidentSeverity,
+  })
+  @IsEnum(IncidentSeverity, {
+    message: 'Invalid severity : ["CRITICAL", "WARNING]',
+  })
   severity: IncidentSeverity;
 
   @ApiProperty()
   @IsString({ message: 'Summary should be a string' })
   summary: string;
 
-  @ApiProperty({description:"Incident "})
+  @ApiProperty({ description: 'Incident ' })
   @IsDate()
   @IsOptional()
   resolvedAt: Date;

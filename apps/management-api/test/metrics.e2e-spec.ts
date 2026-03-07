@@ -89,7 +89,9 @@ describe('Metrics (e2e, real app + real db)', () => {
     const created = await request(app.getHttpServer())
       .post('/teams')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: `e2e-metric-team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+      .send({
+        name: `e2e-metric-team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      })
       .expect(201);
 
     trackId(createdTeamIds, created.body.id);
@@ -107,7 +109,11 @@ describe('Metrics (e2e, real app + real db)', () => {
     return created.body.id as string;
   };
 
-  const createMonitor = async (token: string, teamId: string, projectId: string) => {
+  const createMonitor = async (
+    token: string,
+    teamId: string,
+    projectId: string,
+  ) => {
     const created = await request(app.getHttpServer())
       .post(`/teams/${teamId}/projects/${projectId}/monitors`)
       .set('Authorization', `Bearer ${token}`)
@@ -118,9 +124,16 @@ describe('Metrics (e2e, real app + real db)', () => {
     return created.body.id as string;
   };
 
-  const createMetric = async (token: string, teamId: string, projectId: string, monitorId: string) => {
+  const createMetric = async (
+    token: string,
+    teamId: string,
+    projectId: string,
+    monitorId: string,
+  ) => {
     const created = await request(app.getHttpServer())
-      .post(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics`)
+      .post(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics`,
+      )
       .set('Authorization', `Bearer ${token}`)
       .send(buildMetricPayload(monitorId))
       .expect(201);
@@ -199,7 +212,12 @@ describe('Metrics (e2e, real app + real db)', () => {
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
 
-    const created = await createMetric(auth.token, teamId, projectId, monitorId);
+    const created = await createMetric(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     expect(created.body).toEqual(
       expect.objectContaining({
@@ -214,13 +232,20 @@ describe('Metrics (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createMetric(auth.token, teamId, projectId, monitorId);
+    const created = await createMetric(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     const beginDate = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const endDate = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
     const list = await request(app.getHttpServer())
-      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics`)
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics`,
+      )
       .query({ beginDate, endDate, region: 'IN' })
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200);
@@ -235,10 +260,17 @@ describe('Metrics (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createMetric(auth.token, teamId, projectId, monitorId);
+    const created = await createMetric(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     const found = await request(app.getHttpServer())
-      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics/${created.body.id}`)
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200);
 
@@ -255,10 +287,17 @@ describe('Metrics (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createMetric(auth.token, teamId, projectId, monitorId);
+    const created = await createMetric(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     const updated = await request(app.getHttpServer())
-      .patch(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics/${created.body.id}`)
+      .patch(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .send({ statusCode: 503 })
       .expect(200);
@@ -276,15 +315,24 @@ describe('Metrics (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createMetric(auth.token, teamId, projectId, monitorId);
+    const created = await createMetric(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     await request(app.getHttpServer())
-      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics/${created.body.id}`)
+      .delete(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'true');
 
     await request(app.getHttpServer())
-      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics/${created.body.id}`)
+      .delete(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'false');
   });
@@ -299,7 +347,9 @@ describe('Metrics (e2e, real app + real db)', () => {
     const endDate = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
     await request(app.getHttpServer())
-      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics`)
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/metrics`,
+      )
       .query({ beginDate, endDate, region: 'IN' })
       .expect(401);
   });

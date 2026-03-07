@@ -44,7 +44,7 @@ describe('PriorityQueue (Integration)', () => {
       await service.addItem(testQueue, now + 5000, item3); // Not due
 
       const dueItems = await service.getDueItems(10, testQueue, now);
-      
+
       expect(dueItems).toHaveLength(2);
       expect(dueItems).toContain(item1);
       expect(dueItems).toContain(item2);
@@ -69,7 +69,7 @@ describe('PriorityQueue (Integration)', () => {
 
       exists = await service.checkDataExists(queueName);
       expect(exists).toBe(true);
-      await new Promise(resolve => setTimeout(resolve, 15000)); // Wait 11 seconds
+      await new Promise((resolve) => setTimeout(resolve, 15000)); // Wait 11 seconds
       exists = await service.checkDataExists(queueName);
       expect(exists).toBe(false);
     }, 30000);

@@ -1,5 +1,5 @@
 export enum Topics {
-  CHECK_EXECUTION_ADD= 'checks.execution.add',
+  CHECK_EXECUTION_ADD = 'checks.execution.add',
   CHECK_EXECUTION_REQUESTED = 'checks.execution.requested',
   CHECK_EXECUTION_COMPLETED = 'checks.execution.completed',
   CHECK_EXECUTION_FAILED = 'checks.execution.failed',

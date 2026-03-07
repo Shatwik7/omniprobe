@@ -1,12 +1,11 @@
-import { IsNumber, IsPositive, IsString, IsUUID} from "class-validator";
+import { IsNumber, IsPositive, IsString, IsUUID } from 'class-validator';
 
 export class CheckExecutionAddEvent {
-    @IsString()
-    @IsUUID()
-    id!: string;
+  @IsString()
+  @IsUUID()
+  id!: string;
 
-
-    @IsNumber()
-    @IsPositive()
-    frequency!: number; // in seconds
+  @IsNumber()
+  @IsPositive()
+  frequency!: number; // in seconds
 }

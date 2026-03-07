@@ -17,9 +17,9 @@ import { AuthModule } from '../auth/auth.module';
       useFactory: (config: ConfigService) => ({
         redisUrl: config.get<string>('REDIS_URL') || 'redis://localhost:6379',
       }),
-    })
+    }),
   ],
   controllers: [MetricsController],
   providers: [MetricsService],
 })
-export class MetricsModule { }
+export class MetricsModule {}

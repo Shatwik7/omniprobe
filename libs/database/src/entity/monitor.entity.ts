@@ -1,4 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+} from 'typeorm';
 import { Project } from './project.entity';
 import { AlertPolicy } from './alert-policy.entity';
 import { Metric } from './metric.entity';
@@ -59,10 +69,11 @@ export class Monitor {
   @Column({ type: 'jsonb', nullable: true })
   maintencePeriods?: Record<string, any>[] | null;
 
-
   // "Project has Multiple Monitors"
   @ApiProperty()
-  @ManyToOne(() => Project, (project) => project.monitors, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Project, (project) => project.monitors, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'project_id' })
   project!: Project;
 

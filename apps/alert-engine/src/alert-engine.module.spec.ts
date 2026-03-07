@@ -2,8 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AlertEngineController } from './alert-engine.controller';
 import { AlertEngineService } from './alert-engine.service';
 import { AlertEngineModule } from './alert-engine.module';
-import {describe, beforeEach, it, expect} from '@jest/globals';
-
+import { describe, beforeEach, it, expect } from '@jest/globals';
 
 describe('AlertEngineModule', () => {
   let controller: AlertEngineController;

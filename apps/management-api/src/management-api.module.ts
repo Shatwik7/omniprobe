@@ -15,6 +15,15 @@ import { AlertPolicyModule } from './alert-policy/alert-policy.module';
   imports: [
     ConfigModule,
     DatabaseModule,
-    UsersModule,AuthModule,TeamsModule, ProjectsModule, MonitorsModule, MetricsModule, IncidentsModule, NotificationsModule, AlertPolicyModule],
+    UsersModule,
+    AuthModule,
+    TeamsModule,
+    ProjectsModule,
+    MonitorsModule,
+    MetricsModule,
+    IncidentsModule,
+    NotificationsModule,
+    AlertPolicyModule,
+  ],
 })
 export class ManagementApiModule {}

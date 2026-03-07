@@ -30,7 +30,8 @@ describe('Monitors (e2e, real app + real db)', () => {
     };
   };
 
-  const buildTeamName = () => `e2e-monitor-team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const buildTeamName = () =>
+    `e2e-monitor-team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
   const buildProjectPayload = () => ({
     name: `e2e-monitor-project-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
@@ -92,7 +93,11 @@ describe('Monitors (e2e, real app + real db)', () => {
     return created.body.id as string;
   };
 
-  const createMonitor = async (token: string, teamId: string, projectId: string) => {
+  const createMonitor = async (
+    token: string,
+    teamId: string,
+    projectId: string,
+  ) => {
     const created = await request(app.getHttpServer())
       .post(`/teams/${teamId}/projects/${projectId}/monitors`)
       .set('Authorization', `Bearer ${token}`)
@@ -222,7 +227,9 @@ describe('Monitors (e2e, real app + real db)', () => {
     const updatedName = `${created.body.name}-updated`;
 
     const updated = await request(app.getHttpServer())
-      .patch(`/teams/${teamId}/projects/${projectId}/monitors/${created.body.id}`)
+      .patch(
+        `/teams/${teamId}/projects/${projectId}/monitors/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .send({ name: updatedName })
       .expect(200);
@@ -242,12 +249,16 @@ describe('Monitors (e2e, real app + real db)', () => {
     const created = await createMonitor(auth.token, teamId, projectId);
 
     await request(app.getHttpServer())
-      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${created.body.id}`)
+      .delete(
+        `/teams/${teamId}/projects/${projectId}/monitors/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'true');
 
     await request(app.getHttpServer())
-      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${created.body.id}`)
+      .delete(
+        `/teams/${teamId}/projects/${projectId}/monitors/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'false');
   });

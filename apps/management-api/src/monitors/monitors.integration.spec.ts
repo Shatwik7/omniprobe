@@ -10,7 +10,10 @@ import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
 
 describe('Monitors Integration (controller + service + repository)', () => {
   let controller: MonitorsController;
-  let monitorRepository: Pick<Repository<Monitor>, 'create' | 'save' | 'find' | 'findOne' | 'delete'>;
+  let monitorRepository: Pick<
+    Repository<Monitor>,
+    'create' | 'save' | 'find' | 'findOne' | 'delete'
+  >;
 
   const monitorRepositoryMock = {
     create: jest.fn(),
@@ -115,17 +118,27 @@ describe('Monitors Integration (controller + service + repository)', () => {
 
   it('update and remove should flow through save/delete', async () => {
     monitorRepositoryMock.findOne.mockReturnValueOnce(
-      Promise.resolve({ id: 'monitor-1', name: 'Old Name', project: { id: 'project-1' } } as unknown as Monitor),
+      Promise.resolve({
+        id: 'monitor-1',
+        name: 'Old Name',
+        project: { id: 'project-1' },
+      } as unknown as Monitor),
     );
     monitorRepositoryMock.save.mockReturnValueOnce(
       Promise.resolve({ id: 'monitor-1', name: 'New Name' } as Monitor),
     );
-    monitorRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    monitorRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
-    const updateResponse = await controller.update('project-1', 'monitor-1', { name: 'New Name' });
+    const updateResponse = await controller.update('project-1', 'monitor-1', {
+      name: 'New Name',
+    });
     const removeResponse = await controller.remove('project-1', 'monitor-1');
 
-    expect(monitorRepository.save).toHaveBeenCalledWith(expect.objectContaining({ name: 'New Name' }));
+    expect(monitorRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'New Name' }),
+    );
     expect(monitorRepository.delete).toHaveBeenCalledWith({
       id: 'monitor-1',
       project: { id: 'project-1' },

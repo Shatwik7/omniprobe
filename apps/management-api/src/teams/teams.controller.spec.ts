@@ -1,9 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TeamsController } from './teams.controller';
 import { TeamsService } from './teams.service';
-import {describe, beforeEach, it, expect, jest} from '@jest/globals';
+import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { Team } from '@app/database';
-
 
 describe('TeamsController', () => {
   let controller: TeamsController;
@@ -87,7 +86,9 @@ describe('TeamsController', () => {
 
     const response = await controller.update('team-1', { name: 'Platform' });
 
-    expect(teamsService.update).toHaveBeenCalledWith('team-1', { name: 'Platform' });
+    expect(teamsService.update).toHaveBeenCalledWith('team-1', {
+      name: 'Platform',
+    });
     expect(response).toEqual(updateResult);
   });
 

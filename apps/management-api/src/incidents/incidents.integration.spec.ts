@@ -10,7 +10,10 @@ import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
 
 describe('Incidents Integration (controller + service + repository)', () => {
   let controller: IncidentsController;
-  let repository: Pick<Repository<Incident>, 'create' | 'save' | 'find' | 'findOne' | 'delete'>;
+  let repository: Pick<
+    Repository<Incident>,
+    'create' | 'save' | 'find' | 'findOne' | 'delete'
+  >;
 
   const incidentRepositoryMock = {
     create: jest.fn(),
@@ -56,8 +59,12 @@ describe('Incidents Integration (controller + service + repository)', () => {
       notifications: [],
     };
 
-    incidentRepositoryMock.create.mockReturnValueOnce({ summary: 'Service down' } as Incident);
-    incidentRepositoryMock.save.mockReturnValueOnce(Promise.resolve({ id: 'incident-1' } as Incident));
+    incidentRepositoryMock.create.mockReturnValueOnce({
+      summary: 'Service down',
+    } as Incident);
+    incidentRepositoryMock.save.mockReturnValueOnce(
+      Promise.resolve({ id: 'incident-1' } as Incident),
+    );
 
     const response = await controller.create(dto as any);
 
@@ -73,27 +80,45 @@ describe('Incidents Integration (controller + service + repository)', () => {
   });
 
   it('findAll should flow to repository.find by monitor', async () => {
-    incidentRepositoryMock.find.mockReturnValueOnce(Promise.resolve([{ id: 'incident-1' }]));
+    incidentRepositoryMock.find.mockReturnValueOnce(
+      Promise.resolve([{ id: 'incident-1' }]),
+    );
 
     const response = await controller.findAll('monitor-1');
 
-    expect(repository.find).toHaveBeenCalledWith({ where: { monitor: { id: 'monitor-1' } } });
+    expect(repository.find).toHaveBeenCalledWith({
+      where: { monitor: { id: 'monitor-1' } },
+    });
     expect(response).toEqual([{ id: 'incident-1' }]);
   });
 
   it('findOne should flow to repository.findOne', async () => {
-    incidentRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve({ id: 'incident-1' }));
+    incidentRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'incident-1' }),
+    );
 
     const response = await controller.findOne('incident-1');
 
-    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'incident-1' }, relations: { acknowledgedBy: true, metric: true, monitor: true, notifications: true } });
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { id: 'incident-1' },
+      relations: {
+        acknowledgedBy: true,
+        metric: true,
+        monitor: true,
+        notifications: true,
+      },
+    });
     expect(response).toEqual({ id: 'incident-1' });
   });
 
   it('update and remove should flow with placeholder update and repository delete', async () => {
-    incidentRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    incidentRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
-    const updateResponse = await controller.update('42', { summary: 'Updated' } as any);
+    const updateResponse = await controller.update('42', {
+      summary: 'Updated',
+    } as any);
     const removeResponse = await controller.remove('incident-1');
 
     expect(updateResponse).toBe('This action updates a #42 incident');

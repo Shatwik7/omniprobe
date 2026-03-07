@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { LongPollingModule, LongPollingModuleAsyncOptions } from './long-polling.module';
+import {
+  LongPollingModule,
+  LongPollingModuleAsyncOptions,
+} from './long-polling.module';
 import { LongPollingService, LongPollingOptions } from './long-polling.service';
 import { LONG_POLLING_OPTIONS } from './long-polling.constant';
 import { Module } from '@nestjs/common';
@@ -25,36 +28,39 @@ describe('LongPollingModule', () => {
       }).compile();
 
       const service = module.get<LongPollingService>(LongPollingService);
-      const pollingOptions = module.get<LongPollingOptions>(LONG_POLLING_OPTIONS);
+      const pollingOptions =
+        module.get<LongPollingOptions>(LONG_POLLING_OPTIONS);
 
       expect(service).toBeInstanceOf(LongPollingService);
       expect(pollingOptions).toEqual(options);
     });
 
     it('should import modules', async () => {
-        @Module({
-            exports: [String],
-            providers: [{
-                provide: String,
-                useValue: 'test'
-            }]
-        })
-        class TestModule {}
+      @Module({
+        exports: [String],
+        providers: [
+          {
+            provide: String,
+            useValue: 'test',
+          },
+        ],
+      })
+      class TestModule {}
 
-        const options: LongPollingModuleAsyncOptions = {
-            imports: [TestModule],
-            useFactory: (test: string) => ({
-                redisUrl: 'redis://localhost:6379',
-            }),
-            inject: [String],
-        };
+      const options: LongPollingModuleAsyncOptions = {
+        imports: [TestModule],
+        useFactory: (test: string) => ({
+          redisUrl: 'redis://localhost:6379',
+        }),
+        inject: [String],
+      };
 
-        const module: TestingModule = await Test.createTestingModule({
-            imports: [LongPollingModule.forRootAsync(options)],
-        }).compile();
+      const module: TestingModule = await Test.createTestingModule({
+        imports: [LongPollingModule.forRootAsync(options)],
+      }).compile();
 
-        const service = module.get<LongPollingService>(LongPollingService);
-        expect(service).toBeInstanceOf(LongPollingService);
+      const service = module.get<LongPollingService>(LongPollingService);
+      expect(service).toBeInstanceOf(LongPollingService);
     });
   });
 });

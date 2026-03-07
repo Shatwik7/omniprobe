@@ -11,7 +11,10 @@ import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
 
 describe('Metrics Integration (controller + service + repository)', () => {
   let controller: MetricsController;
-  let metricRepository: Pick<Repository<Metric>, 'create' | 'save' | 'find' | 'findOne' | 'delete'>;
+  let metricRepository: Pick<
+    Repository<Metric>,
+    'create' | 'save' | 'find' | 'findOne' | 'delete'
+  >;
   let monitorRepository: Pick<Repository<Monitor>, 'findOne'>;
 
   const metricRepositoryMock = {
@@ -90,13 +93,22 @@ describe('Metrics Integration (controller + service + repository)', () => {
       monitorId: 'monitor-1',
     };
 
-    metricRepositoryMock.create.mockReturnValueOnce({ durationMs: 120 } as Metric);
-    metricRepositoryMock.save.mockReturnValueOnce(Promise.resolve({ id: 'metric-1', durationMs: 120 } as Metric));
-    pollingServiceMock.publishUpdate.mockReturnValueOnce(Promise.resolve(undefined));
+    metricRepositoryMock.create.mockReturnValueOnce({
+      durationMs: 120,
+    } as Metric);
+    metricRepositoryMock.save.mockReturnValueOnce(
+      Promise.resolve({ id: 'metric-1', durationMs: 120 } as Metric),
+    );
+    pollingServiceMock.publishUpdate.mockReturnValueOnce(
+      Promise.resolve(undefined),
+    );
 
     const response = await controller.create(dto);
 
-    expect(pollingServiceMock.publishUpdate).toHaveBeenCalledWith('monitor-1', dto);
+    expect(pollingServiceMock.publishUpdate).toHaveBeenCalledWith(
+      'monitor-1',
+      dto,
+    );
     expect(metricRepository.create).toHaveBeenCalledWith({
       durationMs: 120,
       statusCode: 200,
@@ -115,13 +127,23 @@ describe('Metrics Integration (controller + service + repository)', () => {
   });
 
   it('findAll should flow through monitor ownership check and metric query', async () => {
-    monitorRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve({ id: 'monitor-1' }));
-    metricRepositoryMock.find.mockReturnValueOnce(Promise.resolve([{ id: 'metric-1' }]));
+    monitorRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'monitor-1' }),
+    );
+    metricRepositoryMock.find.mockReturnValueOnce(
+      Promise.resolve([{ id: 'metric-1' }]),
+    );
 
     const beginDate = new Date('2026-01-01T00:00:00.000Z');
     const endDate = new Date('2026-01-02T00:00:00.000Z');
 
-    const response = await controller.findAll('monitor-1', 'project-1', beginDate, endDate, 'IN');
+    const response = await controller.findAll(
+      'monitor-1',
+      'project-1',
+      beginDate,
+      endDate,
+      'IN',
+    );
 
     expect(monitorRepository.findOne).toHaveBeenCalledWith({
       where: { id: 'monitor-1', project: { id: 'project-1' } },
@@ -132,8 +154,12 @@ describe('Metrics Integration (controller + service + repository)', () => {
 
   it('poll should flow through monitor check then long polling wait', async () => {
     const payload = { id: 'metric-1', statusCode: 200 };
-    monitorRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve({ id: 'monitor-1' }));
-    pollingServiceMock.waitForUpdates.mockReturnValueOnce(Promise.resolve(payload));
+    monitorRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'monitor-1' }),
+    );
+    pollingServiceMock.waitForUpdates.mockReturnValueOnce(
+      Promise.resolve(payload),
+    );
 
     const response = await controller.poll('monitor-1', 'project-1');
 
@@ -142,9 +168,15 @@ describe('Metrics Integration (controller + service + repository)', () => {
   });
 
   it('update and remove should flow to repository save/delete', async () => {
-    metricRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve({ id: 'metric-1', statusCode: 200 } as Metric));
-    metricRepositoryMock.save.mockReturnValueOnce(Promise.resolve({ id: 'metric-1', statusCode: 500 } as Metric));
-    metricRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    metricRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'metric-1', statusCode: 200 } as Metric),
+    );
+    metricRepositoryMock.save.mockReturnValueOnce(
+      Promise.resolve({ id: 'metric-1', statusCode: 500 } as Metric),
+    );
+    metricRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
     const updated = await controller.update('metric-1', { statusCode: 500 });
     const removed = await controller.remove('metric-1');

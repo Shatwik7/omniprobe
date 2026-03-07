@@ -2,7 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request = require('supertest');
 import { DataSource, Repository } from 'typeorm';
-import { Incident, IncidentSeverity, IncidentStatus, Monitor, Project, Team, User } from '@app/database';
+import {
+  Incident,
+  IncidentSeverity,
+  IncidentStatus,
+  Monitor,
+  Project,
+  Team,
+  User,
+} from '@app/database';
 import { ManagementApiModule } from '../src/management-api.module';
 import * as dotenv from 'dotenv';
 import { describe, beforeAll, afterAll, it, expect } from '@jest/globals';
@@ -80,7 +88,9 @@ describe('Incidents (e2e, real app + real db)', () => {
     const created = await request(app.getHttpServer())
       .post('/teams')
       .set('Authorization', `Bearer ${token}`)
-      .send({ name: `e2e-incident-team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+      .send({
+        name: `e2e-incident-team-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      })
       .expect(201);
 
     trackId(createdTeamIds, created.body.id);
@@ -98,7 +108,11 @@ describe('Incidents (e2e, real app + real db)', () => {
     return created.body.id as string;
   };
 
-  const createMonitor = async (token: string, teamId: string, projectId: string) => {
+  const createMonitor = async (
+    token: string,
+    teamId: string,
+    projectId: string,
+  ) => {
     const created = await request(app.getHttpServer())
       .post(`/teams/${teamId}/projects/${projectId}/monitors`)
       .set('Authorization', `Bearer ${token}`)
@@ -109,9 +123,16 @@ describe('Incidents (e2e, real app + real db)', () => {
     return created.body.id as string;
   };
 
-  const createIncident = async (token: string, teamId: string, projectId: string, monitorId: string) => {
+  const createIncident = async (
+    token: string,
+    teamId: string,
+    projectId: string,
+    monitorId: string,
+  ) => {
     const created = await request(app.getHttpServer())
-      .post(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents`)
+      .post(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents`,
+      )
       .set('Authorization', `Bearer ${token}`)
       .send(buildIncidentPayload(monitorId))
       .expect(201);
@@ -161,7 +182,10 @@ describe('Incidents (e2e, real app + real db)', () => {
 
     if (teamsRepository && createdTeamIds.length > 0) {
       for (const teamId of createdTeamIds) {
-        const team = await teamsRepository.findOne({ where: { id: teamId }, relations: ['members'] });
+        const team = await teamsRepository.findOne({
+          where: { id: teamId },
+          relations: ['members'],
+        });
         if (team) {
           team.members = [];
           await teamsRepository.save(team);
@@ -185,7 +209,12 @@ describe('Incidents (e2e, real app + real db)', () => {
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
 
-    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+    const created = await createIncident(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     expect(created.body).toEqual(
       expect.objectContaining({
@@ -202,10 +231,17 @@ describe('Incidents (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+    const created = await createIncident(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     const list = await request(app.getHttpServer())
-      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents`)
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200);
 
@@ -219,10 +255,17 @@ describe('Incidents (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+    const created = await createIncident(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     const found = await request(app.getHttpServer())
-      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`)
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200);
 
@@ -239,10 +282,17 @@ describe('Incidents (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+    const created = await createIncident(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     const updated = await request(app.getHttpServer())
-      .patch(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`)
+      .patch(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .send({ summary: 'Updated summary' })
       .expect(200);
@@ -255,15 +305,24 @@ describe('Incidents (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+    const created = await createIncident(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     await request(app.getHttpServer())
-      .post(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}/acknowledge`)
+      .post(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}/acknowledge`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200);
 
     const found = await request(app.getHttpServer())
-      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`)
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200);
 
@@ -283,15 +342,24 @@ describe('Incidents (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+    const created = await createIncident(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
 
     await request(app.getHttpServer())
-      .post(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}/resolve`)
+      .post(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}/resolve`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200);
 
     const found = await request(app.getHttpServer())
-      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`)
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${created.body.id}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200);
 
@@ -303,7 +371,12 @@ describe('Incidents (e2e, real app + real db)', () => {
     const teamId = await createTeam(auth.token);
     const projectId = await createProject(auth.token, teamId);
     const monitorId = await createMonitor(auth.token, teamId, projectId);
-    const created = await createIncident(auth.token, teamId, projectId, monitorId);
+    const created = await createIncident(
+      auth.token,
+      teamId,
+      projectId,
+      monitorId,
+    );
     const incidentId = created.body.id as string;
     const incidentIndex = createdIncidentIds.indexOf(incidentId);
     if (incidentIndex > -1) {
@@ -311,12 +384,16 @@ describe('Incidents (e2e, real app + real db)', () => {
     }
 
     await request(app.getHttpServer())
-      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${incidentId}`)
+      .delete(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${incidentId}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'true');
 
     await request(app.getHttpServer())
-      .delete(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${incidentId}`)
+      .delete(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents/${incidentId}`,
+      )
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'false');
   });
@@ -328,8 +405,9 @@ describe('Incidents (e2e, real app + real db)', () => {
     const monitorId = await createMonitor(auth.token, teamId, projectId);
 
     await request(app.getHttpServer())
-      .get(`/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents`)
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/incidents`,
+      )
       .expect(401);
   });
-  
 });

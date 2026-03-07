@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+} from 'typeorm';
 import { Incident } from './incident.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -7,7 +14,6 @@ export class Notification {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
   id!: string;
-
 
   @ApiProperty()
   @Column()
@@ -22,10 +28,11 @@ export class Notification {
   status!: string;
 
   @ApiProperty()
-  @ManyToOne(() => Incident, (incident) => incident.notifications, { nullable: true })
+  @ManyToOne(() => Incident, (incident) => incident.notifications, {
+    nullable: true,
+  })
   @JoinColumn({ name: 'incident_id' })
   incident?: Incident;
-
 
   @ApiProperty()
   @Column({ type: 'text', nullable: true })
@@ -34,7 +41,6 @@ export class Notification {
   @ApiProperty()
   @Column({ type: 'text', nullable: true })
   title?: string;
-
 
   @ApiProperty()
   @CreateDateColumn()

@@ -73,9 +73,13 @@ describe('Projects Integration (controller + service + repositories)', () => {
       Promise.resolve([{ id: 'project-1', name: 'P1' }]),
     );
 
-    const response = await controller.findAll('team-1', { user: { id: 'user-1' } });
+    const response = await controller.findAll('team-1', {
+      user: { id: 'user-1' },
+    });
 
-    expect(projectsRepository.find).toHaveBeenCalledWith({ where: { team: { id: 'team-1' } } });
+    expect(projectsRepository.find).toHaveBeenCalledWith({
+      where: { team: { id: 'team-1' } },
+    });
     expect(response).toEqual([{ id: 'project-1', name: 'P1' }]);
   });
 
@@ -97,9 +101,13 @@ describe('Projects Integration (controller + service + repositories)', () => {
         team: { createdBy: { id: 'user-1' } },
       } as unknown as Project),
     );
-    projectsRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    projectsRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
-    const response = await controller.remove('project-1', { user: { id: 'user-1' } });
+    const response = await controller.remove('project-1', {
+      user: { id: 'user-1' },
+    });
 
     expect(projectsRepository.findOne).toHaveBeenCalledWith({
       where: { id: 'project-1' },

@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseUUIDPipe, HttpStatus, HttpCode, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  ParseUUIDPipe,
+  HttpStatus,
+  HttpCode,
+  Req,
+} from '@nestjs/common';
 import { IncidentsService } from './incidents.service';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
@@ -18,26 +31,33 @@ export class IncidentsController {
 
   @Get()
   @UseGuards(TeamMemberGuard)
-  findAll(@Param('monitorId',ParseUUIDPipe) monitorId: string){
+  findAll(@Param('monitorId', ParseUUIDPipe) monitorId: string) {
     return this.incidentsService.findAll(monitorId);
   }
 
   @Get(':id')
   @UseGuards(TeamMemberGuard)
-  findOne(@Param('id',ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.incidentsService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(TeamMemberGuard)
-  update(@Param('id') id: string, @Body() updateIncidentDto: UpdateIncidentDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateIncidentDto: UpdateIncidentDto,
+  ) {
     return this.incidentsService.update(+id, updateIncidentDto);
   }
 
   @Post(':id/acknowledge')
   @UseGuards(TeamMemberGuard)
   @HttpCode(HttpStatus.OK)
-  acknowledge(@Param('id',ParseUUIDPipe) id: string, @Req() req: any, @Body('userId') userId?: string) {
+  acknowledge(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: any,
+    @Body('userId') userId?: string,
+  ) {
     const acknowledgedByUserId = userId ?? req.user?.id ?? req.user?.userId;
     return this.incidentsService.acknowledge(id, acknowledgedByUserId);
   }
@@ -45,13 +65,13 @@ export class IncidentsController {
   @Post(':id/resolve')
   @UseGuards(TeamMemberGuard)
   @HttpCode(HttpStatus.OK)
-  resolve(@Param('id',ParseUUIDPipe) id: string) {
+  resolve(@Param('id', ParseUUIDPipe) id: string) {
     return this.incidentsService.resolve(id);
   }
 
   @Delete(':id')
   @UseGuards(TeamMemberGuard)
-  remove(@Param('id',ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.incidentsService.remove(id);
   }
 }

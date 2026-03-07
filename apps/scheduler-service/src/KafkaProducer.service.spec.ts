@@ -1,9 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { KafkaProducerService } from './KafkaProducer.service';
 import { ClientKafka } from '@nestjs/microservices';
-import { CheckExecutionRequestedEvent, Topics, HttpMethod } from '@app/kafka-topics';
+import {
+  CheckExecutionRequestedEvent,
+  Topics,
+  HttpMethod,
+} from '@app/kafka-topics';
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { of} from 'rxjs';
+import { of } from 'rxjs';
 
 describe('KafkaProducerService', () => {
   let service: KafkaProducerService;
@@ -25,7 +29,7 @@ describe('KafkaProducerService', () => {
     }).compile();
 
     service = module.get<KafkaProducerService>(KafkaProducerService);
-    kafkaClient = module.get('KAFKA_PRODUCER') as any;
+    kafkaClient = module.get('KAFKA_PRODUCER');
   });
 
   it('should be defined', () => {
@@ -57,16 +61,21 @@ describe('KafkaProducerService', () => {
     });
 
     it('should return false and log error when emit fails', async () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-        const error = new Error('Kafka emit failed');
-        mockKafkaClient.emit.mockImplementation(() => {
-            throw error;
-        });
+      const consoleSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const error = new Error('Kafka emit failed');
+      mockKafkaClient.emit.mockImplementation(() => {
+        throw error;
+      });
 
-        const result = await service.emitCheckExecutionRequested(mockEvent);
+      const result = await service.emitCheckExecutionRequested(mockEvent);
 
-        expect(consoleSpy).toHaveBeenCalledWith('Error emitting Kafka event:', error);
-        expect(result).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error emitting Kafka event:',
+        error,
+      );
+      expect(result).toBe(false);
     });
   });
 });

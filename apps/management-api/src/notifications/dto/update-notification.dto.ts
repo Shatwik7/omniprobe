@@ -1,2 +1,1 @@
-
-export class UpdateNotificationDto  {}
+export class UpdateNotificationDto {}

@@ -5,7 +5,6 @@ import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
 
-
 describe('MonitorsController', () => {
   let controller: MonitorsController;
   let monitorsService: {
@@ -31,7 +30,7 @@ describe('MonitorsController', () => {
         {
           provide: MonitorsService,
           useValue: monitorsServiceMock,
-        }
+        },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -87,7 +86,10 @@ describe('MonitorsController', () => {
 
     const response = await controller.findOne('project-1', 'monitor-1');
 
-    expect(monitorsService.findOne).toHaveBeenCalledWith('project-1', 'monitor-1');
+    expect(monitorsService.findOne).toHaveBeenCalledWith(
+      'project-1',
+      'monitor-1',
+    );
     expect(response).toEqual(monitor);
   });
 
@@ -95,9 +97,15 @@ describe('MonitorsController', () => {
     const updated = { id: 'monitor-1', name: 'API Health Updated' };
     monitorsService.update.mockReturnValueOnce(Promise.resolve(updated));
 
-    const response = await controller.update('project-1', 'monitor-1', { name: 'API Health Updated' });
+    const response = await controller.update('project-1', 'monitor-1', {
+      name: 'API Health Updated',
+    });
 
-    expect(monitorsService.update).toHaveBeenCalledWith('project-1', 'monitor-1', { name: 'API Health Updated' });
+    expect(monitorsService.update).toHaveBeenCalledWith(
+      'project-1',
+      'monitor-1',
+      { name: 'API Health Updated' },
+    );
     expect(response).toEqual(updated);
   });
 
@@ -106,7 +114,10 @@ describe('MonitorsController', () => {
 
     const response = await controller.remove('project-1', 'monitor-1');
 
-    expect(monitorsService.remove).toHaveBeenCalledWith('project-1', 'monitor-1');
+    expect(monitorsService.remove).toHaveBeenCalledWith(
+      'project-1',
+      'monitor-1',
+    );
     expect(response).toBe(true);
   });
 });

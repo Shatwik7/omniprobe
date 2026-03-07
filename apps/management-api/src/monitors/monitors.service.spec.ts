@@ -2,15 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MonitorsService } from './monitors.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Monitor } from '@app/database';
-import {describe, beforeEach, it, expect, jest} from '@jest/globals';
+import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { Project, Team } from '@app/database';
 import { Repository } from 'typeorm';
 
-
-
 describe('MonitorsService', () => {
   let service: MonitorsService;
-  let monitorRepository: Pick<Repository<Monitor>, 'create' | 'save' | 'find' | 'findOne' | 'delete'>;
+  let monitorRepository: Pick<
+    Repository<Monitor>,
+    'create' | 'save' | 'find' | 'findOne' | 'delete'
+  >;
 
   const monitorRepositoryMock = {
     create: jest.fn(),
@@ -22,10 +23,12 @@ describe('MonitorsService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [MonitorsService, {
-        provide: getRepositoryToken(Monitor),
-        useValue: monitorRepositoryMock,
-      },
+      providers: [
+        MonitorsService,
+        {
+          provide: getRepositoryToken(Monitor),
+          useValue: monitorRepositoryMock,
+        },
         {
           provide: getRepositoryToken(Project),
           useValue: {},
@@ -33,7 +36,8 @@ describe('MonitorsService', () => {
         {
           provide: getRepositoryToken(Team),
           useValue: {},
-        }],
+        },
+      ],
     }).compile();
 
     service = module.get<MonitorsService>(MonitorsService);
@@ -136,7 +140,9 @@ describe('MonitorsService', () => {
   it('update should return null when monitor is missing', async () => {
     monitorRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve(null));
 
-    const response = await service.update('project-1', 'monitor-1', { name: 'Updated' });
+    const response = await service.update('project-1', 'monitor-1', {
+      name: 'Updated',
+    });
 
     expect(response).toBeNull();
     expect(monitorRepository.save).not.toHaveBeenCalled();
@@ -151,10 +157,14 @@ describe('MonitorsService', () => {
     } as unknown as Monitor;
     const saved = { ...existing, name: 'API Health Updated' } as Monitor;
 
-    monitorRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve(existing));
+    monitorRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve(existing),
+    );
     monitorRepositoryMock.save.mockReturnValueOnce(Promise.resolve(saved));
 
-    const response = await service.update('project-1', 'monitor-1', { name: 'API Health Updated' });
+    const response = await service.update('project-1', 'monitor-1', {
+      name: 'API Health Updated',
+    });
 
     expect(monitorRepository.save).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'API Health Updated' }),
@@ -163,7 +173,9 @@ describe('MonitorsService', () => {
   });
 
   it('remove should return true when row is deleted', async () => {
-    monitorRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
+    monitorRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 1 }),
+    );
 
     const response = await service.remove('project-1', 'monitor-1');
 
@@ -175,7 +187,9 @@ describe('MonitorsService', () => {
   });
 
   it('remove should return false when nothing is deleted', async () => {
-    monitorRepositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 0 }));
+    monitorRepositoryMock.delete.mockReturnValueOnce(
+      Promise.resolve({ affected: 0 }),
+    );
 
     const response = await service.remove('project-1', 'monitor-1');
 

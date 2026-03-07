@@ -178,8 +178,12 @@ describe('Users (e2e, real app + real db)', () => {
       .send(payload)
       .expect(201);
 
-    await request(app.getHttpServer()).delete(`/users/${created.body.id}`).expect(200, 'true');
-    await request(app.getHttpServer()).delete(`/users/${created.body.id}`).expect(200, 'false');
+    await request(app.getHttpServer())
+      .delete(`/users/${created.body.id}`)
+      .expect(200, 'true');
+    await request(app.getHttpServer())
+      .delete(`/users/${created.body.id}`)
+      .expect(200, 'false');
   });
 
   it('PATCH /users/:id should return current update placeholder message', async () => {

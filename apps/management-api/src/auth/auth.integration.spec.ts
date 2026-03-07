@@ -58,7 +58,10 @@ describe('Auth Integration (module + service + strategies)', () => {
     const registered = await authService.register(payload);
     createdUserIds.push(registered.id as string);
 
-    const validated = await localStrategy.validate(payload.email, payload.password);
+    const validated = await localStrategy.validate(
+      payload.email,
+      payload.password,
+    );
 
     expect(validated).toEqual(
       expect.objectContaining({
@@ -74,9 +77,9 @@ describe('Auth Integration (module + service + strategies)', () => {
     const registered = await authService.register(payload);
     createdUserIds.push(registered.id as string);
 
-    await expect(localStrategy.validate(payload.email, 'invalid-password')).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(
+      localStrategy.validate(payload.email, 'invalid-password'),
+    ).rejects.toThrow(UnauthorizedException);
   });
 
   it('JwtStrategy.validate should return decoded payload', async () => {

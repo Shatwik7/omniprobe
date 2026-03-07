@@ -5,7 +5,6 @@ export async function transformAndValidate<T>(
   cls: new () => T,
   payload: unknown,
 ): Promise<T | null> {
-
   const instance = plainToInstance(cls, payload, {
     enableImplicitConversion: true,
     exposeDefaultValues: true,

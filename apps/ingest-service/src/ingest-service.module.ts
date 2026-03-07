@@ -3,7 +3,13 @@ import { IngestServiceController } from './ingest-service.controller';
 import { IngestServiceService } from './ingest-service.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule } from '@nestjs/config';
-import { AlertPolicy, DatabaseModule, Incident, Metric, Monitor } from '@app/database';
+import {
+  AlertPolicy,
+  DatabaseModule,
+  Incident,
+  Metric,
+  Monitor,
+} from '@app/database';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
@@ -20,6 +26,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
           client: {
             clientId: 'scheduler-producer',
             brokers: ['localhost:9092'],
+            retry: {
+              retries: 10,
+            }
           },
         },
       },

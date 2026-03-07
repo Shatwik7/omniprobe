@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
-import {describe, beforeEach, it, expect, jest} from '@jest/globals';
+import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '@app/database';
 import { Repository } from 'typeorm';
@@ -57,7 +57,9 @@ describe('UsersService', () => {
 
     const response = await service.findOne('user-1');
 
-    expect(repository.findOne).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+    });
     expect(response).toEqual(user);
   });
 

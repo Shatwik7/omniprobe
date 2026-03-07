@@ -1,6 +1,6 @@
 require("esbuild")
 .build({
-  entryPoints: ["dist/apps/management-api/main.js"],
+  entryPoints: ["dist/apps/management-api/apps/management-api/src/main.js"],
   bundle: true,
   platform: "node",
   outfile: "apps/management-api/build/main.js",

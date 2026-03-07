@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { AlertPolicyService } from './alert-policy.service';
 import { CreateAlertPolicyDto } from './dto/create-alert-policy.dto';
 import { UpdateAlertPolicyDto } from './dto/update-alert-policy.dto';
@@ -11,7 +20,7 @@ export class AlertPolicyController {
   constructor(private readonly alertPolicyService: AlertPolicyService) {}
 
   @Post()
-  create(@Body() createAlertPolicyDto: CreateAlertPolicyDto,) {
+  create(@Body() createAlertPolicyDto: CreateAlertPolicyDto) {
     return this.alertPolicyService.create(createAlertPolicyDto);
   }
 
@@ -26,7 +35,10 @@ export class AlertPolicyController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAlertPolicyDto: UpdateAlertPolicyDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateAlertPolicyDto: UpdateAlertPolicyDto,
+  ) {
     return this.alertPolicyService.update(+id, updateAlertPolicyDto);
   }
 

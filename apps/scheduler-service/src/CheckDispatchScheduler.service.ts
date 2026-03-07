@@ -1,7 +1,13 @@
 import { Monitor, Project, User } from '@app/database';
 import { CheckExecutionRequestedEvent, Topics } from '@app/kafka-topics';
 import { HttpMethods } from '@app/kafka-topics/enums/HttpMethods';
-import { Injectable, Inject, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { ClientKafka } from '@nestjs/microservices';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,11 +15,12 @@ import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class CheckDispatchScheduler  implements OnModuleInit, OnModuleDestroy {
-  private readonly logger:Logger=new Logger(CheckDispatchScheduler.name)
+export class CheckDispatchScheduler implements OnModuleInit, OnModuleDestroy {
+  private readonly logger: Logger = new Logger(CheckDispatchScheduler.name);
   constructor(
     @Inject('KAFKA_PRODUCER') private readonly kafkaClient: ClientKafka,
-    @InjectRepository(Monitor) private readonly monitorRepository: Repository<Monitor>
+    @InjectRepository(Monitor)
+    private readonly monitorRepository: Repository<Monitor>,
   ) {}
 
   // Connect the producer when the module starts
@@ -38,9 +45,8 @@ export class CheckDispatchScheduler  implements OnModuleInit, OnModuleDestroy {
   //     enqueuedAt:new Date().toISOString(),
   //     headers:{},
   //     body:""
-  //   }  
+  //   }
 
-    
   //   this.kafkaClient.emit(Topics.CHECK_EXECUTION_REQUESTED, data);
   //   this.logger.log(data);
   //   return;

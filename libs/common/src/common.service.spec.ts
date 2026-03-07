@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommonService } from './common.service';
-import {describe, beforeEach, it, expect} from '@jest/globals';
+import { describe, beforeEach, it, expect } from '@jest/globals';
 import { from } from 'rxjs';
 
 describe('CommonService', () => {

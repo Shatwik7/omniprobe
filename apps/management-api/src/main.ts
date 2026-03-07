@@ -1,10 +1,11 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
 import { NestFactory } from '@nestjs/core';
 import { ManagementApiModule } from './management-api.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
-import * as dotenv from 'dotenv';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-dotenv.config();
+
 const logger = new Logger();
 
 async function bootstrap() {
@@ -39,7 +40,6 @@ async function bootstrap() {
   await app.listen(Port).then(() => logger.log(`Listing on Port : ${Port}`));
 }
 
-bootstrap()
-  .catch((error) => {
-    logger.error(error);
-  });
+bootstrap().catch((error) => {
+  logger.error(error);
+});

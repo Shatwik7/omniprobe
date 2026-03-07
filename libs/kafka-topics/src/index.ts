@@ -8,3 +8,4 @@ export * from './dtos/HttpCheckError.dto';
 export * from './dtos/HttpTimingMetrics.dto';
 export * from './enums/topics';
 export * from './enums/HttpMethods';
+export * from './createTopic';

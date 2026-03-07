@@ -14,20 +14,26 @@ import { TeamMemberGuard } from './guards/teamMember.guard';
   imports: [
     ConfigModule,
     PassportModule,
-    JwtModule.registerAsync(
-      {
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (config: ConfigService) => {
-          return ({
-            secret: config.get<string>('JWT_SECRET') || 'jwt-secret',
-            signOptions: { expiresIn: '1d'  },
-          })
-        }
-      }
-    ),
-    DatabaseModule],
-  providers: [AuthService, LocalStrategy, JwtStrategy, JwtAuthGuard, LocalAuthGuard, TeamMemberGuard],
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        return {
+          secret: config.get<string>('JWT_SECRET') || 'jwt-secret',
+          signOptions: { expiresIn: '1d' },
+        };
+      },
+    }),
+    DatabaseModule,
+  ],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    JwtAuthGuard,
+    LocalAuthGuard,
+    TeamMemberGuard,
+  ],
   exports: [AuthService, JwtAuthGuard, LocalAuthGuard, TeamMemberGuard],
 })
-export class AuthModule { }
+export class AuthModule {}

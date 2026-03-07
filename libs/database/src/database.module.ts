@@ -12,7 +12,7 @@ import { Notification } from './entity/notification.entity';
 
 @Module({
   imports: [
-     TypeOrmModule.forRootAsync({
+    TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -22,12 +22,30 @@ import { Notification } from './entity/notification.entity';
         username: config.get<string>('POSTGRES_USER'),
         password: config.get<string>('POSTGRES_PASSWORD'),
         database: config.get<string>('POSTGRES_DB'),
-        entities: [User, Team, Project, AlertPolicy, Incident, Metric, Monitor, Notification],
+        entities: [
+          User,
+          Team,
+          Project,
+          AlertPolicy,
+          Incident,
+          Metric,
+          Monitor,
+          Notification,
+        ],
         synchronize: true,
       }),
     }),
-    TypeOrmModule.forFeature([User, Team, Project, AlertPolicy, Incident, Metric, Monitor, Notification])
+    TypeOrmModule.forFeature([
+      User,
+      Team,
+      Project,
+      AlertPolicy,
+      Incident,
+      Metric,
+      Monitor,
+      Notification,
+    ]),
   ],
-  exports: [TypeOrmModule]
+  exports: [TypeOrmModule],
 })
 export class DatabaseModule {}

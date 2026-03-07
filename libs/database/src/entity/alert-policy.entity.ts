@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Monitor } from './monitor.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -15,15 +22,17 @@ export class AlertPolicy {
   // Configuration for thresholds (e.g., { "cpu_threshold": 80, "timeout_ms": 5000 })
   @ApiProperty()
   @Column({
-    type: 'jsonb', default: {
-      "cpu_threshold": 80,
-      "timeout_ms": 30000,
-      "maintence_periods": [{
-        "start": 0,
-        "end": 0
-      }],
-      
-    } 
+    type: 'jsonb',
+    default: {
+      cpu_threshold: 80,
+      timeout_ms: 30000,
+      maintence_periods: [
+        {
+          start: 0,
+          end: 0,
+        },
+      ],
+    },
   })
   rules?: Record<string, any>;
 

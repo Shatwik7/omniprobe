@@ -1,4 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+} from 'typeorm';
 import { Monitor } from './monitor.entity';
 import { Notification } from './notification.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -27,7 +37,11 @@ export class Incident {
   status!: IncidentStatus;
 
   @ApiProperty()
-  @Column({ type: 'enum', enum: IncidentSeverity, default: IncidentSeverity.CRITICAL })
+  @Column({
+    type: 'enum',
+    enum: IncidentSeverity,
+    default: IncidentSeverity.CRITICAL,
+  })
   severity!: IncidentSeverity;
 
   @ApiProperty()
@@ -35,14 +49,14 @@ export class Incident {
   summary?: string;
 
   @ApiProperty()
-  @Column({ type: 'timestamp',nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   resolvedAt?: Date;
 
   @ApiProperty()
-  @Column({type:"timestamp", nullable:true})
+  @Column({ type: 'timestamp', nullable: true })
   acknowledgedAt?: Date;
 
-  @ApiProperty({ required: false})
+  @ApiProperty({ required: false })
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'acknowledged_by' })
   acknowledgedBy?: User;

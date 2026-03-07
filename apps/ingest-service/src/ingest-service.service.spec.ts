@@ -12,7 +12,7 @@ import {
 } from '@app/kafka-topics';
 import { HttpMethods } from '@app/kafka-topics/enums/HttpMethods';
 import { HttpErrorType } from '@app/kafka-topics/enums/HttpError';
-import { jest, describe, it, expect, beforeEach} from '@jest/globals';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 describe('IngestServiceService', () => {
   let service: IngestServiceService;
@@ -56,7 +56,7 @@ describe('IngestServiceService', () => {
     }).compile();
 
     service = module.get<IngestServiceService>(IngestServiceService);
-    
+
     monitorRepo = module.get(getRepositoryToken(Monitor));
     metricRepo = module.get(getRepositoryToken(Metric));
     incidentRepo = module.get(getRepositoryToken(Incident));
@@ -79,16 +79,16 @@ describe('IngestServiceService', () => {
       },
       Response: {
         status_code: 200,
-        tcp_beginning_start: 100, 
-        tcp_end: 200, 
-        tls_start: 300, 
-        tls_end: 400, 
-        ttfb: 500, 
-        tdt: 600, 
+        tcp_beginning_start: 100,
+        tcp_end: 200,
+        tls_start: 300,
+        tls_end: 400,
+        ttfb: 500,
+        tdt: 600,
         dns_lookup_end: 700,
         server_processing_time: 50,
       },
-      region: 'IN'
+      region: 'IN',
     };
 
     it('should do nothing if monitor is not found', async () => {
@@ -209,7 +209,7 @@ describe('IngestServiceService', () => {
         timestamp: Date.now(),
         url: 'http://test.com',
       },
-      region:'IN'
+      region: 'IN',
     };
 
     it('should do nothing if monitor is not found', async () => {
