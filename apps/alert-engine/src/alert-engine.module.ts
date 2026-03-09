@@ -1,10 +1,7 @@
 import { Module } from '@nestjs/common';
-import { AlertEngineController } from './alert-engine.controller';
-import { AlertEngineService } from './alert-engine.service';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
-  imports: [],
-  controllers: [AlertEngineController],
-  providers: [AlertEngineService],
+  imports: [AnalyticsModule],
 })
 export class AlertEngineModule {}

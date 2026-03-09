@@ -1,30 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AlertEngineController } from './alert-engine.controller';
-import { AlertEngineService } from './alert-engine.service';
 import { AlertEngineModule } from './alert-engine.module';
 import { describe, beforeEach, it, expect } from '@jest/globals';
+import { ConfigModule } from '@nestjs/config';
+import { AnalyticsController } from './analytics/analytics.controller';
+import { AnalyticsService } from './analytics/analytics.service';
 
 describe('AlertEngineModule', () => {
-  let controller: AlertEngineController;
-  let service: AlertEngineService;
+  let controller: AnalyticsController;
+  let service: AnalyticsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AlertEngineModule],
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          load: [() => ({
+            REDIS_URL: 'redis://localhost:6379',
+          })],
+        }),
+        AlertEngineModule,
+      ],
     }).compile();
-
-    controller = module.get<AlertEngineController>(AlertEngineController);
-    service = module.get<AlertEngineService>(AlertEngineService);
+    controller =module.get<AnalyticsController>(AnalyticsController);
+    service = module.get<AnalyticsService>(AnalyticsService);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
     expect(service).toBeDefined();
-  });
-
-  describe('getHello', () => {
-    it('should return "Hello World!"', () => {
-      expect(controller.getHello()).toBe('Hello World!');
-    });
   });
 });
