@@ -9,4 +9,5 @@ export enum Topics {
   INCIDENTS_ACKNOWLEDGED = 'incidents.acknowledged',
   INCIDENTS_ESCALATED = 'incidents.escalated',
   INCIDENTS_RESOLVED = 'incidents.resolved',
+  CHECK_ANALYTICS_REQUESTED = 'checks.analytics.requested'
 }

@@ -9,6 +9,7 @@ import { Incident } from './entity/incident.entity';
 import { Metric } from './entity/metric.entity';
 import { Monitor } from './entity/monitor.entity';
 import { Notification } from './entity/notification.entity';
+import { Analytics } from './entity/analytics.entity';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { Notification } from './entity/notification.entity';
           Metric,
           Monitor,
           Notification,
+          Analytics,
         ],
         synchronize: true,
       }),
@@ -44,6 +46,7 @@ import { Notification } from './entity/notification.entity';
       Metric,
       Monitor,
       Notification,
+      Analytics,
     ]),
   ],
   exports: [TypeOrmModule],
