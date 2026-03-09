@@ -47,7 +47,6 @@ export class CheckSchedulerController {
         console.log('❌ Invalid message. Skipping.');
         return;
       }
-      console.log('Received CheckExecutionAddEvent:', dto);
       await this.priorityQueue.addItem(
         'check-execution-queue',
         Date.now() + dto.frequency * 1000,
