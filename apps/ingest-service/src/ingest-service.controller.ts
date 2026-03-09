@@ -1,4 +1,4 @@
-import { Controller, Inject } from '@nestjs/common';
+import { Controller, Inject, Logger } from '@nestjs/common';
 import { IngestServiceService } from './ingest-service.service';
 import { ClientKafka, EventPattern, Payload } from '@nestjs/microservices';
 import {
@@ -11,6 +11,8 @@ import { validate } from 'class-validator';
 
 @Controller()
 export class IngestServiceController {
+  private readonly logger = new Logger('IngestServiceController');
+
   constructor(
     private readonly ingestServiceService: IngestServiceService,
     @Inject('KAFKA_PRODUCER') private readonly kafkaClient: ClientKafka,
@@ -71,7 +73,7 @@ export class IngestServiceController {
 
     const errors = await validate(data);
     if (errors.length > 0) {
-      console.log('❌ Invalid message. Skipping.');
+      this.logger.log('❌ Invalid message. Skipping.');
       return;
     }
 
@@ -85,7 +87,7 @@ export class IngestServiceController {
 
     const errors = await validate(data);
     if (errors.length > 0) {
-      console.log('❌ Invalid message. Skipping.');
+      this.logger.log('❌ Invalid message. Skipping.');
       return;
     }
 
