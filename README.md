@@ -1,5 +1,5 @@
 # 🌐 Omniprobe
-Omniprobe is a high-performance, multi-regional observability platform designed for modern HTTP/HTTPS ecosystems. It unifies API monitoring, SLA enforcement, machine-learning-driven anomaly detection, and incident management into a single, scalable microservices architecture.
+Omniprobe is a high-performance, multi-regional observability platform designed for modern HTTP/HTTPS ecosystems. It unifies API monitoring, SLA enforcement, real-time analytics, andomaly detection, and incident management into a single, scalable microservices architecture.
 
 🚀 **Key Features**
 
@@ -32,61 +32,73 @@ Omniprobe is a high-performance, multi-regional observability platform designed 
 | Testing          | Jest (unit & end‑to‑end)             |
 | Lint/Format      | ESLint, Prettier                     |
 | CI/CD            | GitLab CI (.gitlab-ci.yml)           |
-| Observability    | Prometheus & Grafana (optional)      |
 
 > **Monorepo layout:** services live under `apps/`; shared code lives under `libs/`.
 
 > **Note:** This repository follows a monorepo structure. Microservices are located in `apps/`, while shared logic and entities reside in `libs/`.
 
 🧠 **High‑Level Design**
+<img src="https://drive.google.com/uc?export=view&id=1SaIrmIe6lNAAUrRzqkxmuFHBkSJuWBYI" width="100%" height="400">
+
 <img src="https://drive.google.com/uc?export=view&id=1WR3ipwB4wRDsNqEKQtQXgwifpEXVIzGI" width="100%" height="900">
 
-The platform is composed of a set of small, focused services that communicate via Kafka and REST:
+The platform is composed of a set of small, focused services that communicate via Kafka and REST. Each numbered component below maps to a microservice in `apps/` or a shared library:
 
-- **Probe Services** (`alert-engine`, `ingest-service`, `notification-service`, etc.)
-  - Run in each monitored region.
-  - Consume and produce events on Kafka topics defined in `libs/kafka-topics`.
-  - Perform HTTP checks, SLA evaluations, notification dispatch, and analytics.
+1. **Management API (Control Plane)**
+   - Central interface consumed by the React frontend client.
+   - Responsibilities: authentication/authorization, monitor & alert policy configuration, incident tracking, metrics querying, and long‑polling APIs for real‑time updates.
+   - Communicates with PostgreSQL (persistent data), Redis (caching) and Kafka (event production).
 
-- **Management API** (`apps/management-api`)
-  - Exposes the central REST/Swagger API used by frontend clients and CLI tools.
-  - Stores configuration, incidents, metrics and user data in PostgreSQL using TypeORM.
+2. **Distributed Scheduler** (`scheduler-service`)
+   - Orchestrates monitoring tasks across regions.
+   - Maintains a schedule in Redis sorted sets (ZSET) keyed by `nextCheckTime`.
+   - Uses Redis distributed locks to ensure a single scheduler instance performs work.
+   - Loop: acquire lock → fetch due monitors → push execution events to Kafka → update schedule → release lock.
 
-- **Scheduler & Worker Services** (`scheduler-service`, `worker-service`)
-  - Execute scheduled jobs (cronlike tasks) and background work.
-  - Support priority queues and Kafka producers for asynchronous processing.
+3. **Regional Worker Services** (`worker-service`)
+   - Deployed in multiple geographic regions (NA, EU, IN, AU, etc.).
+   - Consume check‑execution events from Kafka and perform HTTP/HTTPS requests.
+   - Record detailed telemetry (DNS, TCP, TLS, TTFB, server processing, transfer time).
+   - Produce execution results back to Kafka within an instrumented HTTP client.
 
-- **Shared Libraries**
-  - `libs/common` – common NestJS modules, validation logic, enums, long‑polling support.
-  - `libs/database` – TypeORM entities representing alerts, incidents, metrics, users, etc.
-  - `libs/kafka-topics` – DTOs and helpers for Kafka message schemas.
+4. **Ingest Service** (`ingest-service`)
+   - Processes execution results from workers.
+   - Persists metrics to PostgreSQL time‑series tables (using time‑series extension).
+   - Detects failures and creates incidents for failed checks.
+   - Forwards metrics to the Alert Engine for evaluation and generates analytics events.
+
+5. **Alert Engine** (`alert-engine`)
+   - Evaluates incoming metrics against alert policies.
+   - Performs real‑time analytics and anomaly detection (jitter, component degradation, SLA violation).
+   - Supports preemptive alerting (predictive models), jitter detection, and degradation analysis.
+   - Triggers alerts and incidents when conditions (latency thresholds, error rates, anomaly scores) are met.
+
+6. **Notification Service** (`notification-service`)
+   - Dispatches alert/incident notifications to various channels: webhooks, phone calls, SMS, email, Slack.
+   - Consumes notification events from Kafka and handles retries/failures.
+
+7. **Storage Layer**
+   - **PostgreSQL**: time‑series optimized tables store metrics, incidents, monitors, alert policies, users, etc.
+   - **Redis**: distributed locks, scheduling queues (ZSETs), caching, and cross-service coordination.
 
 Each service has its own `tsconfig.app.json` and tests; build outputs are placed under `build/`.
 
 ---
 
-### 📁 Project Structure
+#### Architecture Characteristics
 
-```
-apps/
-  alert-engine/        # alert evaluation and analytics
-  ingest-service/      # incoming event ingestion
-  management-api/      # central REST API
-  notification-service # sends out alerts
-  scheduler-service    # scheduled jobs & SLA polling
-  worker-service       # background task processing
-libs/
-  common/              # shared modules & helpers
-  database/            # TypeORM entities
-  kafka-topics/        # Kafka DTOs & enums
-```
+- **Event‑Driven** – Kafka topics decouple services and allow horizontal scaling.
+- **Multi‑Regional Monitoring** – Workers simulate global user traffic; scheduling is federated.
+- **Distributed Scheduling** – Redis locks and sorted sets ensure only one scheduler runs per region.
+- **Real‑Time Analytics** – The Alert Engine processes metrics immediately upon arrival.
+- **Incident‑Driven Workflow** – Failures automatically generate incidents, which in turn trigger notifications.
 
 ---
 
 ### 🛠 Getting Started
 
 #### Prerequisites
-- Node.js v18+ (LTS recommended)
+- Node.js v24
 - Docker & Docker Compose
 - npm or yarn
 
