@@ -15,35 +15,40 @@ import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('alert-policy')
-@UseGuards(JwtAuthGuard, TeamMemberGuard)
+@UseGuards(JwtAuthGuard)
 export class AlertPolicyController {
   constructor(private readonly alertPolicyService: AlertPolicyService) {}
 
+  @UseGuards(TeamMemberGuard)
   @Post()
   create(@Body() createAlertPolicyDto: CreateAlertPolicyDto) {
     return this.alertPolicyService.create(createAlertPolicyDto);
   }
 
   @Get()
+  @UseGuards(TeamMemberGuard)
   findAll() {
     return this.alertPolicyService.findAll();
   }
 
   @Get(':id')
+  @UseGuards(TeamMemberGuard)
   findOne(@Param('id') id: string) {
-    return this.alertPolicyService.findOne(+id);
+    return this.alertPolicyService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(TeamMemberGuard)
   update(
     @Param('id') id: string,
     @Body() updateAlertPolicyDto: UpdateAlertPolicyDto,
   ) {
-    return this.alertPolicyService.update(+id, updateAlertPolicyDto);
+    return this.alertPolicyService.update(id, updateAlertPolicyDto);
   }
 
   @Delete(':id')
+  @UseGuards(TeamMemberGuard)
   remove(@Param('id') id: string) {
-    return this.alertPolicyService.remove(+id);
+    return this.alertPolicyService.remove(id);
   }
 }

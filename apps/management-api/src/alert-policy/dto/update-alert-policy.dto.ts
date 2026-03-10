@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/swagger';
 import { CreateAlertPolicyDto } from './create-alert-policy.dto';
 
-export class UpdateAlertPolicyDto {}
+export class UpdateAlertPolicyDto extends PartialType(CreateAlertPolicyDto) {}

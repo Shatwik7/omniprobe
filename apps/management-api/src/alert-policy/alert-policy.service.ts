@@ -1,26 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { CreateAlertPolicyDto } from './dto/create-alert-policy.dto';
 import { UpdateAlertPolicyDto } from './dto/update-alert-policy.dto';
+import { AlertPolicyRepository } from './alert-policy.repository';
 
 @Injectable()
 export class AlertPolicyService {
+  constructor(
+    private readonly alertPolicyRepository: AlertPolicyRepository,
+  ) {}
   create(createAlertPolicyDto: CreateAlertPolicyDto) {
-    return 'This action adds a new alertPolicy';
+    return this.alertPolicyRepository.createAlertPolicy(createAlertPolicyDto);
   }
 
   findAll() {
-    return `This action returns all alertPolicy`;
+    return this.alertPolicyRepository.findAllAlertPolicies();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} alertPolicy`;
+  findOne(id: string) {
+    return this.alertPolicyRepository.findAlertPolicyById(id);
   }
 
-  update(id: number, updateAlertPolicyDto: UpdateAlertPolicyDto) {
-    return `This action updates a #${id} alertPolicy`;
+  update(id: string, updateAlertPolicyDto: UpdateAlertPolicyDto) {
+    return this.alertPolicyRepository.updateAlertPolicy(id, updateAlertPolicyDto);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} alertPolicy`;
+  remove(id: string) {
+    return this.alertPolicyRepository.deleteAlertPolicy(id);
   }
 }
