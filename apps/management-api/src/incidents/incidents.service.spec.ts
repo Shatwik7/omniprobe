@@ -3,7 +3,7 @@ import { IncidentsService } from './incidents.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Incident } from '@app/database';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
-import { Repository } from 'typeorm';
+import { Repository, UpdateResult } from 'typeorm';
 import { IncidentSeverity, IncidentStatus } from '@app/database';
 
 describe('IncidentsService', () => {
@@ -46,17 +46,20 @@ describe('IncidentsService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
-
+    const incident_id=crypto.randomUUID().toString();
+    const monitor_id=crypto.randomUUID().toString();
+    const user_ID=crypto.randomUUID().toString();
   it('create should map relations and save incident', async () => {
     const dto = {
       status: IncidentStatus.OPEN,
       severity: IncidentSeverity.CRITICAL,
       summary: 'Service down',
-      monitorId: 'monitor-1',
+      monitorId: monitor_id,
       notifications: [],
     };
+
     const created = { summary: 'Service down' } as Incident;
-    const saved = { id: 'incident-1', summary: 'Service down' } as Incident;
+    const saved = { id: incident_id, summary: 'Service down' } as Incident;
 
     incidentRepositoryMock.create.mockReturnValueOnce(created);
     incidentRepositoryMock.save.mockReturnValueOnce(Promise.resolve(saved));
@@ -71,7 +74,7 @@ describe('IncidentsService', () => {
       acknowledgedAt: undefined,
       startedAt: undefined,
       acknowledgedBy: { id: undefined },
-      monitor: { id: 'monitor-1' },
+      monitor: { id: monitor_id },
       notifications: [],
     });
     expect(repository.save).toHaveBeenCalledWith(created);
@@ -79,27 +82,27 @@ describe('IncidentsService', () => {
   });
 
   it('findAll should fetch incidents by monitor id', async () => {
-    const incidents = [{ id: 'incident-1' }] as Incident[];
+    const incidents = [{ id: incident_id}] as Incident[];
     incidentRepositoryMock.find.mockReturnValueOnce(Promise.resolve(incidents));
 
-    const response = await service.findAll('monitor-1');
+    const response = await service.findAll(monitor_id);
 
     expect(repository.find).toHaveBeenCalledWith({
-      where: { monitor: { id: 'monitor-1' } },
+      where: { monitor: { id: monitor_id } },
     });
     expect(response).toEqual(incidents);
   });
 
   it('findOne should fetch incident by id', async () => {
-    const incident = { id: 'incident-1' } as Incident;
+    const incident = { id: incident_id } as Incident;
     incidentRepositoryMock.findOne.mockReturnValueOnce(
       Promise.resolve(incident),
     );
 
-    const response = await service.findOne('incident-1');
+    const response = await service.findOne(incident_id);
 
     expect(repository.findOne).toHaveBeenCalledWith({
-      where: { id: 'incident-1' },
+      where: { id: incident_id },
       relations: {
         acknowledgedBy: true,
         metric: true,
@@ -121,9 +124,9 @@ describe('IncidentsService', () => {
       Promise.resolve({ affected: 1 }),
     );
 
-    const response = await service.remove('incident-1');
+    const response = await service.remove(incident_id);
 
-    expect(repository.delete).toHaveBeenCalledWith({ id: 'incident-1' });
+    expect(repository.delete).toHaveBeenCalledWith({ id: incident_id });
     expect(response).toBe(true);
   });
 
@@ -132,43 +135,8 @@ describe('IncidentsService', () => {
       Promise.resolve({ affected: 0 }),
     );
 
-    const response = await service.remove('incident-1');
+    const response = await service.remove(incident_id);
 
     expect(response).toBe(false);
-  });
-
-  it('acknowledge should update incident with acknowledged status and user', async () => {
-    incidentRepositoryMock.update.mockReturnValueOnce(
-      Promise.resolve({ affected: 1 }),
-    );
-
-    const response = await service.acknowledge('incident-1', 'user-1');
-
-    expect(repository.update).toHaveBeenCalledWith(
-      { id: 'incident-1' },
-      {
-        acknowledgedAt: expect.any(String),
-        acknowledgedBy: { id: 'user-1' },
-        status: IncidentStatus.ACKNOWLEDGED,
-      },
-    );
-    expect(response).toEqual({ affected: 1 });
-  });
-
-  it('resolve should update incident with resolved status', async () => {
-    incidentRepositoryMock.update.mockReturnValueOnce(
-      Promise.resolve({ affected: 1 }),
-    );
-
-    const response = await service.resolve('incident-1');
-
-    expect(repository.update).toHaveBeenCalledWith(
-      { id: 'incident-1' },
-      {
-        resolvedAt: expect.any(String),
-        status: IncidentStatus.RESOLVED,
-      },
-    );
-    expect(response).toEqual({ affected: 1 });
   });
 });

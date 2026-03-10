@@ -17,9 +17,9 @@ export class AnalyticsService {
    * Analyzes a new metric, updates analytics, and persists to database
    * @param newMetric - New metric to analyze
    * @param monitorId - UUID of the monitor
-   * @param region - Region name
-   * @param slaLatency - SLA latency threshold (default: 500ms)
-   * @param windowSize - Size of the metrics window (default: 100)
+   * @param region - Region name (default:'IN')
+   * @param slaLatency - SLA latency threshold (default: 2000ms)
+   * @param windowSize - Size of the metrics window (default: 20)
    * @returns Saved Analytics entity
    */
   async processMetricAndUpdateAnalytics(

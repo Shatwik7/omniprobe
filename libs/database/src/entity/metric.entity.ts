@@ -85,8 +85,8 @@ export class Metric {
   monitor!: Monitor;
 
   @ApiProperty()
-  @CreateDateColumn()
-  responseBody!: string;
+  @Column({ type: 'text', nullable: true })
+  responseBody?: string;
 
   // Using CreateDateColumn as the time-series timestamp
   @ApiProperty()

@@ -9,6 +9,33 @@ import {
 import { Monitor } from './monitor.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
+export interface AlertPolicyDocument_v1 {
+  version: '1.0'
+  rules: {
+    metric: string
+    operator: '>' | '<' | '=' | '>=' | '<='
+    threshold: number | boolean
+    window?: string
+  }[]
+
+  logic: 'AND' | 'OR'
+
+  actions: string[]
+
+  suppression?: {
+    cooldown?: string
+    maintenance?: {
+      start: string
+      end: string
+    }[]
+  }
+}
+
+export interface NotificationChannel {
+  channelType: 'slack' | 'email' | 'phone' | 'webhook' | 'sms' | 'push' | 'whatsapp'
+  address: string
+}
+
 @Entity('alert_policies')
 export class AlertPolicy {
   @ApiProperty()
@@ -19,27 +46,26 @@ export class AlertPolicy {
   @Column()
   name!: string;
 
-  // Configuration for thresholds (e.g., { "cpu_threshold": 80, "timeout_ms": 5000 })
   @ApiProperty()
   @Column({
     type: 'jsonb',
     default: {
-      cpu_threshold: 80,
-      timeout_ms: 30000,
-      maintence_periods: [
-        {
-          start: 0,
-          end: 0,
-        },
-      ],
+      version: '1.0',
+      rules: [],
+      logic: 'AND',
+      actions: [],
+      suppression: {
+        cooldown: '5m',
+        maintenance: [],
+      }
     },
   })
-  rules?: Record<string, any>;
+  rules?: AlertPolicyDocument_v1;
 
-  // Channels can be linked here (Slack, Email, Phone etc.) - Simplified for brevity
+  // Channels can be linked here (Slack, Email, Phone etc.) 
   @ApiProperty()
   @Column({ type: 'jsonb', nullable: true })
-  notificationChannels?: Record<string, any>;
+  notificationChannels?:  NotificationChannel[];
 
   // "Each Monitor Can Have A Alert Policy" -> Inverse side
   @ApiProperty()

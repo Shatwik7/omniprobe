@@ -1,4 +1,4 @@
-import { Catch, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateIncidentDto } from './dto/create-incident.dto';
 import { UpdateIncidentDto } from './dto/update-incident.dto';
 import { InjectRepository } from '@nestjs/typeorm';

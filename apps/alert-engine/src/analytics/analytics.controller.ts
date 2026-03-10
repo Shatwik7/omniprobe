@@ -44,6 +44,13 @@ export class AnalyticsController {
       this.logger.log('❌ Invalid message. Skipping.');
       return;
     }
+    const alert=this.analyticsService.getAlertPolicy(data.MonitorId);
+    const monitor =this.analyticsService.getMonitor(data.MonitorId);
+    const metrics = this.analyticsService.getMetric(data.MetricId);
+    await Promise.all([alert, monitor, metrics]).catch((err)=>{
+      this.logger.error(err);
+      return;
+    });
     return null;
   }
 }
