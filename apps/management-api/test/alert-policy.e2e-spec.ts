@@ -10,6 +10,8 @@ import { describe, beforeAll, afterAll, beforeEach, it, expect } from '@jest/glo
 
 dotenv.config();
 
+const VALID_UUID = '550e8400-e29b-41d4-a716-446655440000';
+
 describe('AlertPolicy E2E (real app + real db)', () => {
   let app: INestApplication;
   let alertPolicyRepo: Repository<AlertPolicy>;
@@ -150,10 +152,10 @@ describe('AlertPolicy E2E (real app + real db)', () => {
     ...(policyId ? { alertPolicyId: policyId } : {}),
   });
 
-  it('POST /alert-policy creates a new policy', async () => {
+  it('POST /teams/:teamId/projects/:projectId/alert-policy creates a new policy', async () => {
     const payload = buildPolicyPayload();
     const res = await request(app.getHttpServer())
-      .post('/alert-policy')
+      .post(`/teams/${teamId}/projects/${projectId}/alert-policy`)
       .set('Authorization', `Bearer ${token}`)
       .send(payload)
       .expect(201);
@@ -162,28 +164,28 @@ describe('AlertPolicy E2E (real app + real db)', () => {
     created.policies.push(res.body.id);
   });
 
-  it('GET /alert-policy returns list', async () => {
+  it('GET /teams/:teamId/projects/:projectId/alert-policy returns list', async () => {
     const payload = buildPolicyPayload();
     const createdRes = await request(app.getHttpServer())
-      .post('/alert-policy')
+      .post(`/teams/${teamId}/projects/${projectId}/alert-policy`)
       .set('Authorization', `Bearer ${token}`)
       .send(payload)
       .expect(201);
     created.policies.push(createdRes.body.id);
 
     const list = await request(app.getHttpServer())
-      .get('/alert-policy')
+      .get(`/teams/${teamId}/projects/${projectId}/alert-policy`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
     expect(Array.isArray(list.body)).toBe(true);
-    expect(list.body.length).toBeGreaterThanOrEqual(1);
+    expect(list.body.length).toBe(1);
   });
 
-  it('GET /alert-policy/:id returns an item', async () => {
+  it('GET /teams/:teamId/projects/:projectId/alert-policy/:id returns an item', async () => {
     const payload = buildPolicyPayload();
     const createdRes = await request(app.getHttpServer())
-      .post('/alert-policy')
+      .post(`/teams/${teamId}/projects/${projectId}/alert-policy`)
       .set('Authorization', `Bearer ${token}`)
       .send(payload)
       .expect(201);
@@ -191,17 +193,17 @@ describe('AlertPolicy E2E (real app + real db)', () => {
     created.policies.push(id);
 
     const single = await request(app.getHttpServer())
-      .get(`/alert-policy/${id}`)
+      .get(`/teams/${teamId}/projects/${projectId}/alert-policy/${id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
     expect(single.body.name).toEqual(payload.name);
   });
 
-  it('PATCH /alert-policy/:id updates the policy', async () => {
+  it('PATCH /teams/:teamId/projects/:projectId/alert-policy/:id updates the policy', async () => {
     const payload = buildPolicyPayload();
     const createdRes = await request(app.getHttpServer())
-      .post('/alert-policy')
+      .post(`/teams/${teamId}/projects/${projectId}/alert-policy`)
       .set('Authorization', `Bearer ${token}`)
       .send(payload)
       .expect(201);
@@ -210,7 +212,7 @@ describe('AlertPolicy E2E (real app + real db)', () => {
 
     const updatePayload = { name: 'updated-name' };
     const updated = await request(app.getHttpServer())
-      .patch(`/alert-policy/${id}`)
+      .patch(`/teams/${teamId}/projects/${projectId}/alert-policy/${id}`)
       .set('Authorization', `Bearer ${token}`)
       .send(updatePayload)
       .expect(200);
@@ -218,10 +220,10 @@ describe('AlertPolicy E2E (real app + real db)', () => {
     expect(updated.body.name).toEqual('updated-name');
   });
 
-  it('DELETE /alert-policy/:id removes the policy', async () => {
+  it('DELETE /teams/:teamId/projects/:projectId/alert-policy/:id removes the policy', async () => {
     const payload = buildPolicyPayload();
     const createdRes = await request(app.getHttpServer())
-      .post('/alert-policy')
+      .post(`/teams/${teamId}/projects/${projectId}/alert-policy`)
       .set('Authorization', `Bearer ${token}`)
       .send(payload)
       .expect(201);
@@ -229,7 +231,7 @@ describe('AlertPolicy E2E (real app + real db)', () => {
     // don't bother tracking, will be wiped by beforeEach
 
     await request(app.getHttpServer())
-      .delete(`/alert-policy/${id}`)
+      .delete(`/teams/${teamId}/projects/${projectId}/alert-policy/${id}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
@@ -239,7 +241,7 @@ describe('AlertPolicy E2E (real app + real db)', () => {
 
   it('can create a monitor for simulation', async () => {
     const policyRes = await request(app.getHttpServer())
-      .post('/alert-policy')
+      .post(`/teams/${teamId}/projects/${projectId}/alert-policy`)
       .set('Authorization', `Bearer ${token}`)
       .send(buildPolicyPayload())
       .expect(201);
@@ -259,7 +261,7 @@ describe('AlertPolicy E2E (real app + real db)', () => {
 
   it('returns 401 when accessing policies without token', async () => {
     await request(app.getHttpServer())
-      .get('/alert-policy')
+      .get(`/teams/${teamId}/projects/${projectId}/alert-policy`)
       .expect(401);
   });
 });
