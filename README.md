@@ -51,9 +51,9 @@ The platform is composed of a set of small, focused services that communicate vi
 
 2. **Distributed Scheduler** (`scheduler-service`)
    - Orchestrates monitoring tasks across regions.
+   - scheduler accuries lock to populate the Redis Sorted Set.
    - Maintains a schedule in Redis sorted sets (ZSET) keyed by `nextCheckTime`.
    - Uses Redis distributed locks to ensure a single scheduler instance performs work.
-   - Loop: acquire lock → fetch due monitors → push execution events to Kafka → update schedule → release lock.
 
 3. **Regional Worker Services** (`worker-service`)
    - Deployed in multiple geographic regions (NA, EU, IN, AU, etc.).
