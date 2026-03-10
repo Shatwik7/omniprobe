@@ -51,8 +51,8 @@ describe('AlertPolicyController', () => {
       const createAlertPolicyDto: CreateAlertPolicyDto = { name: 'Test Policy' };
       service.create.mockResolvedValue('somePolicy');
       expect(service.create).not.toHaveBeenCalled();
-      const result = await controller.create(createAlertPolicyDto);
-      expect(service.create).toHaveBeenCalledWith(createAlertPolicyDto);
+      const result = await controller.create(createAlertPolicyDto,"someProjectId");
+      expect(service.create).toHaveBeenCalledWith(createAlertPolicyDto,"someProjectId");
       expect(result).toEqual('somePolicy');
     });
   });

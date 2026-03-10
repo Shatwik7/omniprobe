@@ -14,8 +14,9 @@ export class AlertPolicyRepository {
 
   async createAlertPolicy(
     createAlertPolicyDto: CreateAlertPolicyDto,
+    projectId: string,
   ): Promise<AlertPolicy> {
-    const newAlertPolicy = this.alertPolicyRepo.create(createAlertPolicyDto);
+    const newAlertPolicy = this.alertPolicyRepo.create({...createAlertPolicyDto,projectId});
     return this.alertPolicyRepo.save(newAlertPolicy);
   }
 

@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { AlertPolicyService } from './alert-policy.service';
 import { CreateAlertPolicyDto } from './dto/create-alert-policy.dto';
@@ -14,15 +15,15 @@ import { UpdateAlertPolicyDto } from './dto/update-alert-policy.dto';
 import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@Controller('alert-policy')
+@Controller('teams/:teamId/projects/:projectId/alert-policy')
 @UseGuards(JwtAuthGuard)
 export class AlertPolicyController {
   constructor(private readonly alertPolicyService: AlertPolicyService) {}
 
   @UseGuards(TeamMemberGuard)
   @Post()
-  create(@Body() createAlertPolicyDto: CreateAlertPolicyDto) {
-    return this.alertPolicyService.create(createAlertPolicyDto);
+  create(@Body() createAlertPolicyDto: CreateAlertPolicyDto, @Param('projectId', ParseUUIDPipe) projectId: string) {
+    return this.alertPolicyService.create(createAlertPolicyDto, projectId);
   }
 
   @Get()

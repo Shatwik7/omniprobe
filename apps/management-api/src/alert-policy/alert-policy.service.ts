@@ -8,8 +8,8 @@ export class AlertPolicyService {
   constructor(
     private readonly alertPolicyRepository: AlertPolicyRepository,
   ) {}
-  create(createAlertPolicyDto: CreateAlertPolicyDto) {
-    return this.alertPolicyRepository.createAlertPolicy(createAlertPolicyDto);
+  create(createAlertPolicyDto: CreateAlertPolicyDto, projectId: string) {
+    return this.alertPolicyRepository.createAlertPolicy(createAlertPolicyDto, projectId);
   }
 
   findAll() {

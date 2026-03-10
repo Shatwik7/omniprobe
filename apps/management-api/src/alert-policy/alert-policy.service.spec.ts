@@ -3,7 +3,7 @@ import { AlertPolicyService } from './alert-policy.service';
 import { AlertPolicyRepository } from './alert-policy.repository';
 import { CreateAlertPolicyDto } from './dto/create-alert-policy.dto';
 import { UpdateAlertPolicyDto } from './dto/update-alert-policy.dto';
-
+import {jest, describe, beforeEach, it, expect} from '@jest/globals';
 const mockAlertPolicyRepository = () => ({
   createAlertPolicy: jest.fn(),
   findAllAlertPolicies: jest.fn(),
@@ -40,8 +40,8 @@ describe('AlertPolicyService', () => {
       const createAlertPolicyDto: CreateAlertPolicyDto = { name: 'Test Policy' };
       repository.createAlertPolicy.mockResolvedValue('somePolicy');
       expect(repository.createAlertPolicy).not.toHaveBeenCalled();
-      const result = await service.create(createAlertPolicyDto);
-      expect(repository.createAlertPolicy).toHaveBeenCalledWith(createAlertPolicyDto);
+      const result = await service.create(createAlertPolicyDto,"someProjectId");
+      expect(repository.createAlertPolicy).toHaveBeenCalledWith(createAlertPolicyDto,"someProjectId");
       expect(result).toEqual('somePolicy');
     });
   });

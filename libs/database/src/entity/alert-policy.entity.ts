@@ -47,6 +47,10 @@ export class AlertPolicy {
   name!: string;
 
   @ApiProperty()
+  @Column({ nullable: false })
+  projectId!: string;
+
+  @ApiProperty()
   @Column({
     type: 'jsonb',
     default: {

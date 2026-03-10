@@ -36,7 +36,7 @@ describe('AlertPolicy Integration Test (service + repository)', () => {
 
   it('should create an alert policy', async () => {
     const createDto: CreateAlertPolicyDto = { name: 'Test Policy' };
-    const policy = await service.create(createDto);
+    const policy = await service.create(createDto,"someProjectId");
     expect(policy).toBeDefined();
     expect(policy.name).toEqual('Test Policy');
 
@@ -45,8 +45,8 @@ describe('AlertPolicy Integration Test (service + repository)', () => {
   });
 
   it('should find all alert policies', async () => {
-    const createDto: CreateAlertPolicyDto = { name: 'Test Policy' };
-    await service.create(createDto);
+    const createDto: CreateAlertPolicyDto = { name: 'Test Policy'};
+    await service.create(createDto,"someProjectId");
 
     const policies = await service.findAll();
     expect(policies).toHaveLength(1);
@@ -55,7 +55,7 @@ describe('AlertPolicy Integration Test (service + repository)', () => {
 
   it('should find an alert policy by id', async () => {
     const createDto: CreateAlertPolicyDto = { name: 'Test Policy' };
-    const policy = await service.create(createDto);
+    const policy = await service.create(createDto,"someProjectId");
 
     const foundPolicy = await service.findOne(policy.id);
     expect(foundPolicy).toBeDefined();
@@ -66,7 +66,7 @@ describe('AlertPolicy Integration Test (service + repository)', () => {
 
   it('should update an alert policy', async () => {
     const createDto: CreateAlertPolicyDto = { name: 'Test Policy' };
-    const policy = await service.create(createDto);
+    const policy = await service.create(createDto,"someProjectId");
 
     const updateDto: UpdateAlertPolicyDto = { name: 'Updated Policy' };
     const updatedPolicy = await service.update(policy.id, updateDto);
@@ -79,7 +79,7 @@ describe('AlertPolicy Integration Test (service + repository)', () => {
 
   it('should delete an alert policy', async () => {
     const createDto: CreateAlertPolicyDto = { name: 'Test Policy' };
-    const policy = await service.create(createDto);
+    const policy = await service.create(createDto,"someProjectId");
 
     await service.remove(policy.id);
     const policies = await repository.findAllAlertPolicies();
