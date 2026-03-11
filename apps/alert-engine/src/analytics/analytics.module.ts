@@ -6,6 +6,8 @@ import { AnalyticsController } from './analytics.controller';
 import { AnalyticsRepository } from './analytics.repository';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { KafkaProducerService } from './kafka-producer.service';
 
 @Module({
   imports: [
@@ -13,11 +15,31 @@ import Redis from 'ioredis';
       isGlobal: true,
     }),
     DatabaseModule,
+    // kafka producer client registration for alerts
+    ClientsModule.register([
+      {
+        name: 'KAFKA_PRODUCER',
+        transport: Transport.KAFKA,
+        options: {
+          client: {
+            clientId: 'alert-engine-producer',
+            brokers: ['localhost:9092'],
+            retry: {
+              retries: 10,
+              initialRetryTime: 1000,
+              factor: 2,
+              maxRetryTime: 60000,
+            },
+          },
+        },
+      },
+    ]),
   ],
   controllers: [AnalyticsController],
   providers: [
     AnalyticsService,
     AnalyticsRepository,
+    KafkaProducerService,
     {
       provide: 'REDIS_CLIENT',
       useFactory: (configService: ConfigService) => {
@@ -40,6 +62,6 @@ import Redis from 'ioredis';
       inject: [ConfigService],
     },
   ],
-  exports: [AnalyticsRepository, AnalyticsService],
+  exports: [AnalyticsRepository, AnalyticsService, KafkaProducerService],
 })
 export class AnalyticsModule {}

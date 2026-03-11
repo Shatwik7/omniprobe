@@ -44,13 +44,10 @@ export class AnalyticsController {
       this.logger.log('❌ Invalid message. Skipping.');
       return;
     }
-    const alert=this.analyticsService.getAlertPolicy(data.MonitorId);
-    const monitor =this.analyticsService.getMonitor(data.MonitorId);
-    const metrics = this.analyticsService.getMetric(data.MetricId);
-    await Promise.all([alert, monitor, metrics]).catch((err)=>{
-      this.logger.error(err);
-      return;
-    });
+
+    const [alert, monitor, metric]=await Promise.all([this.analyticsService.getAlertPolicy(data.MonitorId),this.analyticsService.getMonitor(data.MonitorId), this.analyticsService.getMetric(data.MetricId)]);
+    const sla_letency=alert.rules?.rules.find(a=>a.metric=="sla_latency")?.threshold as number;
+    const analytics = await this.analyticsService.processMetricAndUpdateAnalytics(metric, monitor.id,data.Region, sla_letency);
     return null;
   }
 }

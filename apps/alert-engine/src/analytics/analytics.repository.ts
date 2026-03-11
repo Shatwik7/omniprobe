@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Analytics, Monitor, Metric, AlertPolicy } from '@app/database';
+import { Repository, MoreThan } from 'typeorm';
+import { Analytics, Monitor, Metric, AlertPolicy, Alert } from '@app/database';
 import Redis from 'ioredis';
 import { Inject } from '@nestjs/common';
 
@@ -30,9 +30,78 @@ export class AnalyticsRepository {
     @InjectRepository(AlertPolicy)
     private readonly alertPolicyRepo: Repository<AlertPolicy>,
 
+    @InjectRepository(Alert)
+    private readonly alertRepo: Repository<Alert>,
+
     @Inject('REDIS_CLIENT')
     private readonly redis: Redis,
   ) {}
+
+  /**
+   * Create a new alert record
+   * @param alertData - partial alert data (monitor required)
+   * @returns saved Alert entity
+   */
+  async createAlert(alertData: Partial<Alert>): Promise<Alert> {
+    try {
+      if (!alertData.monitor?.id) {
+        throw new BadRequestException('Monitor ID is required to create alert');
+      }
+
+      const alertEntity = this.alertRepo.create(alertData);
+      const saved = await this.alertRepo.save(alertEntity);
+      this.logger.debug(
+        `Alert created for monitor ${alertData.monitor.id} with message: ${alertData.message}`,
+      );
+      return saved;
+    } catch (error) {
+      this.logger.error(
+        `Failed to create alert: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to create alert',
+      );
+    }
+  }
+
+  /**
+   * Find a recent alert matching monitor/message since a given date
+   * Used to avoid duplicate notifications within a time window
+   * @param monitorId - UUID of monitor
+   * @param message - alert message text
+   * @param since - Date threshold (e.g. one hour ago)
+   * @returns Alert or null
+   */
+  async findRecentAlert(
+    monitorId: string,
+    message: string,
+    since: Date,
+  ): Promise<Alert | null> {
+    try {
+      this.validateUUID(monitorId);
+
+      const alert = await this.alertRepo.findOne({
+        where: {
+          monitor: { id: monitorId },
+          message,
+          createdAt: MoreThan(since),
+        },
+        order: { createdAt: 'DESC' },
+      });
+
+      return alert || null;
+    } catch (error) {
+      // If invalid uuid or other error, just log and return null so caller can proceed
+      this.logger.warn(
+        `Error checking recent alert for monitor ${monitorId}: ${error instanceof Error ? error.message : 'Unknown'}`,
+      );
+      return null;
+    }
+  }
 
   /**
    * Create or update analytics with automatic metrics rotation
@@ -66,10 +135,6 @@ export class AnalyticsRepository {
 
         // Rotate metrics - keep only latest MAX_METRICS_CAPACITY
         if (metricsToSave.length > this.MAX_METRICS_CAPACITY) {
-          this.logger.warn(
-            `Metrics capacity exceeded for monitor ${analyticData.monitor.id}. ` +
-            `Removing ${metricsToSave.length - this.MAX_METRICS_CAPACITY} oldest metrics.`,
-          );
           metricsToSave = metricsToSave.slice(-this.MAX_METRICS_CAPACITY);
         }
       }
@@ -327,6 +392,43 @@ export class AnalyticsRepository {
     }
   }
 
+    /**
+   * Find alert policy by monitor UUID reference
+   * @param MonitorId - UUID of the Monitor Id
+   * @returns AlertPolicy entity with relations
+   */
+  async findAlertPolicyByMonitorId(MonitorId: string): Promise<AlertPolicy> {
+    try {
+      this.validateUUID(MonitorId);
+
+      const policy = await this.alertPolicyRepo.findOne({
+        where: { monitors: { id: MonitorId } },
+        relations: ['monitors'],
+      });
+
+      if (!policy) {
+        throw new NotFoundException(
+          `Alert Policy for Monitor ID ${MonitorId} not found`,
+        );
+      }
+
+      return policy;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+
+      this.logger.error(
+        `Failed to find alert policy for monitor ${MonitorId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new InternalServerErrorException(
+        'Failed to retrieve alert policy data.',
+      );
+    }
+  }
+
+
   /**
    * Find alert policy by UUID
    * @param policyId - UUID of the alert policy
@@ -338,7 +440,7 @@ export class AnalyticsRepository {
 
       const policy = await this.alertPolicyRepo.findOne({
         where: { id: policyId },
-        relations: ['monitor', 'project'],
+        relations: ['monitor'],
       });
 
       if (!policy) {

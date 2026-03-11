@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AnalyticsRepository } from './analytics.repository';
 import { Repository } from 'typeorm';
-import { Analytics, Monitor, Metric, AlertPolicy } from '@app/database';
+import { Analytics, Monitor, Metric, AlertPolicy, Alert } from '@app/database';
 import { BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import Redis from 'ioredis';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { describe, beforeEach, afterEach, it, expect, jest} from '@jest/globals';
+import { describe, beforeEach, afterEach, it, expect, jest } from '@jest/globals';
 
 describe('AnalyticsRepository', () => {
   let repository: AnalyticsRepository;
@@ -14,6 +14,8 @@ describe('AnalyticsRepository', () => {
   let metricRepo: jest.Mocked<Repository<Metric>>;
   let alertPolicyRepo: jest.Mocked<Repository<AlertPolicy>>;
   let redisClient: jest.Mocked<Redis>;
+  let alertRepo: jest.Mocked<Repository<Alert>>;
+
 
   const mockMonitorId = '550e8400-e29b-41d4-a716-446655440000';
   const mockAnalyticsId = '550e8400-e29b-41d4-a716-446655440001';
@@ -46,6 +48,16 @@ describe('AnalyticsRepository', () => {
       findOne: jest.fn(),
     } as any;
 
+    alertRepo = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+      save: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
+    } as any;
+
     // Mock Redis
     redisClient = {
       get: jest.fn(),
@@ -74,6 +86,10 @@ describe('AnalyticsRepository', () => {
         {
           provide: getRepositoryToken(AlertPolicy),
           useValue: alertPolicyRepo,
+        },
+        {
+          provide: getRepositoryToken(Alert),
+          useValue: alertRepo,
         },
         {
           provide: 'REDIS_CLIENT',
@@ -198,7 +214,7 @@ describe('AnalyticsRepository', () => {
       // Verify that update was called and metrics were rotated
       const updateCall = analyticsRepo.update.mock.calls[0];
       const updatedData = updateCall[1] as any;
-      
+
       // Should have 20 metrics (keeping only last 20)
       expect(updatedData.recentMetrics.length).toBe(20);
       // First metric should be the second one (first was removed)

@@ -10,6 +10,7 @@ import { Metric } from './entity/metric.entity';
 import { Monitor } from './entity/monitor.entity';
 import { Notification } from './entity/notification.entity';
 import { Analytics } from './entity/analytics.entity';
+import { Alert } from './entity/alert.entity';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { Analytics } from './entity/analytics.entity';
           Team,
           Project,
           AlertPolicy,
+          Alert,
           Incident,
           Metric,
           Monitor,
@@ -47,6 +49,7 @@ import { Analytics } from './entity/analytics.entity';
       Monitor,
       Notification,
       Analytics,
+      Alert
     ]),
   ],
   exports: [TypeOrmModule],

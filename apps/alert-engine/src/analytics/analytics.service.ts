@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
-import { Analytics, Metric, Monitor, AlertPolicy } from '@app/database';
+import { Analytics, Metric, Monitor, AlertPolicy, AlertType, Alert } from '@app/database';
 import { AnalyticsRepository } from './analytics.repository';
+import { KafkaProducerService } from './kafka-producer.service';
 
 /**
  * Analytics Service - Business logic for analytics computation and persistence
@@ -10,7 +11,10 @@ import { AnalyticsRepository } from './analytics.repository';
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
 
-  constructor(private readonly analyticsRepository: AnalyticsRepository) {}
+  constructor(
+    private readonly analyticsRepository: AnalyticsRepository,
+    private readonly kafkaProducer: KafkaProducerService,
+  ) {}
 
   /**
    * Main analytics computation workflow
@@ -81,6 +85,61 @@ export class AnalyticsService {
         `Analytics processed and saved for monitor ${monitorId}, region ${region}`,
       );
 
+      // create an alert based on extracted analytics, but only for anomalies
+      try {
+        if (computedAnalytics.anomalyDetected) {
+          const alertMessage = JSON.stringify(computedAnalytics);
+
+          // avoid duplicates within the last hour
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+          const recent = await this.analyticsRepository.findRecentAlert(
+            monitorId,
+            alertMessage,
+            oneHourAgo,
+          );
+
+          if (!recent) {
+            // choose type heuristically
+            let type: AlertType = AlertType.ANOMALY;
+            if (computedAnalytics.predictedSlaBreach) {
+              type = AlertType.SLA_BREACH;
+            } else if (computedAnalytics.errorRate && computedAnalytics.errorRate > 0) {
+              type = AlertType.ERROR_RATE;
+            } else if (computedAnalytics.degradingComponent) {
+              type = AlertType.DEGRADATION;
+            }
+
+            let alert=await this.analyticsRepository.createAlert({
+              monitor,
+              metric: newMetric,
+              message: alertMessage,
+              type,
+            });
+
+            // notify via kafka
+            const policy = await this.analyticsRepository.findAlertPolicyByMonitorId(
+              monitorId,
+            );
+            const channelInfo = policy.notificationChannels?.[0];
+            if (channelInfo) {
+              const kafkaEvent = {
+                message: alertMessage,
+                channel: channelInfo.channelType,
+                address: channelInfo.address,
+                title : `ALERT : ${type} detected for monitor ${monitor.name}`,
+                Alert: alert.id
+              };
+              await this.kafkaProducer.emitAlertTriggered(kafkaEvent);
+            }
+          }
+        }
+      } catch (err) {
+        // log but don't fail main workflow
+        this.logger.warn(
+          `failed to create or send alert: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+
       return savedAnalytics;
     } catch (error) {
       this.logger.error(
@@ -146,7 +205,7 @@ export class AnalyticsService {
    * @returns AlertPolicy entity
    */
   async getAlertPolicy(policyId: string): Promise<AlertPolicy> {
-    return this.analyticsRepository.findAlertPolicyById(policyId);
+    return this.analyticsRepository.findAlertPolicyByMonitorId(policyId);
   }
 
   /**

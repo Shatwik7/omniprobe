@@ -8,3 +8,4 @@ export * from './entity/metric.entity';
 export * from './entity/monitor.entity';
 export * from './entity/notification.entity';
 export * from './entity/analytics.entity';
+export * from './entity/alert.entity';

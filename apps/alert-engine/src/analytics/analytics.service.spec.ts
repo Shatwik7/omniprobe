@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsRepository } from './analytics.repository';
-import { Metric, Monitor, Analytics } from '@app/database';
+import { Metric, Monitor, Analytics, AlertPolicy, Alert } from '@app/database';
+import { KafkaProducerService } from './kafka-producer.service';
 import { describe, beforeEach, it, expect, jest} from '@jest/globals';
 
 enum MetricTrend {
@@ -17,12 +18,15 @@ enum MetricTrend {
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
   let repository: jest.Mocked<AnalyticsRepository>;
+  let kafkaProducer: { emitAlertTriggered: jest.Mock };
 
   const mockMonitorId = '550e8400-e29b-41d4-a716-446655440000';
   const mockAnalyticsId = '550e8400-e29b-41d4-a716-446655440001';
   const mockRegion = 'us-east-1';
 
   beforeEach(async () => {
+    kafkaProducer = { emitAlertTriggered: jest.fn() };
+
     const mockRepository = {
       createOrUpdateAnalytics: jest.fn(),
       getAnalyticsByMonitorAndRegion: jest.fn(),
@@ -31,11 +35,14 @@ describe('AnalyticsService', () => {
       findMonitorById: jest.fn(),
       findMetricById: jest.fn(),
       findAlertPolicyById: jest.fn(),
+      findAlertPolicyByMonitorId: jest.fn(),
       getRecentMetricsForMonitor: jest.fn(),
       deleteAnalytics: jest.fn(),
       getAnalyticsCountByMonitor: jest.fn(),
       clearAllCache: jest.fn(),
       getHealthStatus: jest.fn(),
+      findRecentAlert: jest.fn(),
+      createAlert: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -44,6 +51,10 @@ describe('AnalyticsService', () => {
         {
           provide: AnalyticsRepository,
           useValue: mockRepository,
+        },
+        {
+          provide: KafkaProducerService,
+          useValue: kafkaProducer,
         },
       ],
     }).compile();
@@ -411,6 +422,86 @@ describe('AnalyticsService', () => {
         const breach = service.predictSlaBreach([300, 400, 450], 500);
         expect(breach).toBe(false);
       });
+    });
+  });
+
+  describe('Alert creation workflow', () => {
+    it('should create and emit alert when anomaly detected and no duplicate exists', async () => {
+      // arrange
+      const metric: Metric = { total_time_ms: 100 } as any;
+      const monitor: Monitor = { id: mockMonitorId } as any;
+      const policy: AlertPolicy = { notificationChannels: [{ channelType: 'email', address: 'foo@example.com' }] } as any;
+
+      repository.getAnalyticsByMonitorAndRegion.mockResolvedValue(null);
+      repository.findMonitorById.mockResolvedValue(monitor);
+      repository.createOrUpdateAnalytics.mockResolvedValue({} as Analytics);
+      repository.findRecentAlert.mockResolvedValue(null);
+      repository.findAlertPolicyByMonitorId.mockResolvedValue(policy);
+      repository.createAlert.mockResolvedValue({ id: 'alert-id' } as Alert);
+
+      // spy on analyzeMetrics to force anomaly
+      const computed: any = (service as any).analyzeMetrics(metric, null, 2000, 20);
+      computed.anomalyDetected = true;
+      jest.spyOn(service as any, 'analyzeMetrics').mockReturnValue(computed);
+
+      const expectedMessage = JSON.stringify(computed);
+
+      // act
+      await service.processMetricAndUpdateAnalytics(metric, mockMonitorId, mockRegion, 2000);
+
+      // assert
+      expect(repository.findRecentAlert).toHaveBeenCalledWith(
+        mockMonitorId,
+        expectedMessage,
+        expect.any(Date),
+      );
+      expect(repository.createAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ monitor, message: expectedMessage }),
+      );
+      
+      expect(kafkaProducer.emitAlertTriggered).toHaveBeenCalledWith({
+        message: expectedMessage,
+        channel: 'email',
+        address: 'foo@example.com',
+        Alert: 'alert-id',
+        title: expect.any(String),
+      });
+    });
+
+    it('should skip alert creation when duplicate exists even if anomaly detected', async () => {
+      const metric: Metric = { total_time_ms: 200 } as any;
+      repository.getAnalyticsByMonitorAndRegion.mockResolvedValue(null);
+      repository.findMonitorById.mockResolvedValue({ id: mockMonitorId } as Monitor);
+      repository.createOrUpdateAnalytics.mockResolvedValue({} as Analytics);
+      repository.findRecentAlert.mockResolvedValue({ id: 'existing' } as Alert);
+
+      // force anomaly again
+      const computed: any = (service as any).analyzeMetrics(metric, null, 2000, 20);
+      computed.anomalyDetected = true;
+      jest.spyOn(service as any, 'analyzeMetrics').mockReturnValue(computed);
+
+      await service.processMetricAndUpdateAnalytics(metric, mockMonitorId, mockRegion, 2000);
+
+      expect(repository.createAlert).not.toHaveBeenCalled();
+      expect(kafkaProducer.emitAlertTriggered).not.toHaveBeenCalled();
+    });
+
+    it('should not create alert when no anomaly is detected', async () => {
+      const metric: Metric = { total_time_ms: 300 } as any;
+      repository.getAnalyticsByMonitorAndRegion.mockResolvedValue(null);
+      repository.findMonitorById.mockResolvedValue({ id: mockMonitorId } as Monitor);
+      repository.createOrUpdateAnalytics.mockResolvedValue({} as Analytics);
+      repository.findRecentAlert.mockResolvedValue(null);
+
+      // ensure analyzeMetrics returns no anomaly
+      const computed: any = (service as any).analyzeMetrics(metric, null, 2000, 20);
+      computed.anomalyDetected = false;
+      jest.spyOn(service as any, 'analyzeMetrics').mockReturnValue(computed);
+
+      await service.processMetricAndUpdateAnalytics(metric, mockMonitorId, mockRegion, 2000);
+
+      expect(repository.createAlert).not.toHaveBeenCalled();
+      expect(kafkaProducer.emitAlertTriggered).not.toHaveBeenCalled();
     });
   });
 

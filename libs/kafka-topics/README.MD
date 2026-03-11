@@ -39,6 +39,6 @@ The system follows a reactive flow. An execution is requested, processed by a wo
 | `CHECK_EXECUTION_REQUESTED` | `checks.execution.requested` | The initial task containing URL and config. |
 | `CHECK_EXECUTION_COMPLETED` | `checks.execution.completed` | Emitted on 2xx-5xx responses with metrics. |
 | `CHECK_EXECUTION_FAILED` | `checks.execution.failed` | Emitted on network/protocol level crashes. |
-| `ALERTS_TRIGGERED` | `alerts.triggered` | Secondary event for threshold violations. |
+| `ALERTS_TRIGGERED` | `alerts.triggered` | Secondary event for threshold violations. Payload typically includes { message, channel, address } so that notification service can dispatch to correct destination. |
 
 ---
