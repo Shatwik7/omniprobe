@@ -9,6 +9,7 @@ import { describe, beforeEach, it, expect, afterEach, jest } from '@jest/globals
 import { WebHookService } from './notification-providers/WebHook.service';
 import { ConfigModule } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import { LongPollingService } from '@app/common/long-polling/long-polling.service';
 
 describe('NotificationServiceService', () => {
   let service: NotificationServiceService;
@@ -29,10 +30,17 @@ describe('NotificationServiceService', () => {
     send: jest.fn(),
   };
 
+  const mockLongPollingService = {
+    waitForNotification: jest.fn(async () => null),
+    publishUpdate: jest.fn(async () => undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ConfigModule.forRoot({ isGlobal: true }),
-        DatabaseModule],
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
+        DatabaseModule,
+      ],
       providers: [
         NotificationServiceService,
         {
@@ -45,8 +53,12 @@ describe('NotificationServiceService', () => {
         },
         {
           provide: WebHookService,
-          useValue: mockWebHookService, // Mock WebHookService if needed
-        }
+          useValue: mockWebHookService,
+        },
+        {
+          provide: LongPollingService,
+          useValue: mockLongPollingService,
+        },
       ],
     }).compile();
 
@@ -89,8 +101,12 @@ describe('NotificationServiceService', () => {
         alert_id: data.Alert,
         channel: data.channel,
         address: data.address,
-        project: {id:data.Project},
+        project: { id: data.Project },
       });
+      expect(mockLongPollingService.publishUpdate).toHaveBeenCalledWith(
+        `notification:${data.Project}`,
+        notification,
+      );
       expect(mockNotificationRepository.save).toHaveBeenCalledWith(notification);
       expect(mockEmailService.send).toHaveBeenCalledWith(
         data.address,
@@ -125,8 +141,12 @@ describe('NotificationServiceService', () => {
         status: 'PENDING',
         alert_id: data.Alert,
         address: data.address,
-        project: {id:data.Project},
+        project: { id: data.Project },
       });
+      expect(mockLongPollingService.publishUpdate).toHaveBeenCalledWith(
+        `notification:${data.Project}`,
+        notification,
+      );
       expect(mockNotificationRepository.save).toHaveBeenCalledWith(notification);
       expect(mockEmailService.send).not.toHaveBeenCalled();
       expect(notification.status).toEqual('PENDING');
@@ -142,7 +162,6 @@ describe('NotificationServiceService', () => {
         Project: randomUUID(),
       };
 
-      // Exceed the rate limit
       for (let i = 0; i < 11; i++) {
         await service.createAlertNotification(data);
       }
@@ -150,12 +169,14 @@ describe('NotificationServiceService', () => {
       mockNotificationRepository.create.mockClear();
       mockNotificationRepository.save.mockClear();
       mockEmailService.send.mockClear();
+      mockLongPollingService.publishUpdate.mockClear();
 
       await service.createAlertNotification(data);
 
       expect(mockNotificationRepository.create).not.toHaveBeenCalled();
       expect(mockNotificationRepository.save).not.toHaveBeenCalled();
       expect(mockEmailService.send).not.toHaveBeenCalled();
+      expect(mockLongPollingService.publishUpdate).not.toHaveBeenCalled();
     });
   });
 });

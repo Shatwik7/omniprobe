@@ -23,7 +23,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) { }
-  
+
   @Post()
   @UseGuards(TeamMemberGuard)
   @HttpCode(HttpStatus.CREATED)
