@@ -41,6 +41,7 @@ describe('NotificationServiceController', () => {
         channel: 'email',
         address: 'test@example.com',
         Alert: randomUUID(),
+        Project: randomUUID(),
       };
 
       const notification = new Notification();

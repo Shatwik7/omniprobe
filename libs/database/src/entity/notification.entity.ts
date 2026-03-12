@@ -6,9 +6,8 @@ import {
   JoinColumn,
   CreateDateColumn,
 } from 'typeorm';
-import { Incident } from './incident.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { Alert } from './alert.entity';
+import { Project } from './project.entity';
 
 @Entity('notifications')
 export class Notification {
@@ -47,4 +46,11 @@ export class Notification {
   @ApiProperty()
   @CreateDateColumn()
   sentAt!: Date;
+
+  @ApiProperty()
+  @ManyToOne(() => Project, (project) => project.notifications, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'project_id' })
+  project!: Project;
 }

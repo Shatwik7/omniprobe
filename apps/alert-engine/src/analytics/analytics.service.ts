@@ -127,7 +127,8 @@ export class AnalyticsService {
                 channel: channelInfo.channelType,
                 address: channelInfo.address,
                 title : `ALERT : ${type} detected for monitor ${monitor.name}`,
-                Alert: alert.id
+                Alert: alert.id,
+                Project: monitor.project.id,
               };
               await this.kafkaProducer.emitAlertTriggered(kafkaEvent);
             }

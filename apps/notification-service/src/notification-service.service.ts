@@ -63,6 +63,7 @@ export class NotificationServiceService {
       address: data.address,
       status: 'PENDING',
       alert_id: data.Alert,
+      project: {id:data.Project},
     });
     switch (data.channel) {
       case 'email':
@@ -111,6 +112,7 @@ export class NotificationServiceService {
       address: data.address,
       status: 'PENDING',
       incident_id: data.Incident,
+      project: {id:data.Project},
     });
     switch (data.channel) {
       case 'email':

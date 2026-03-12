@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificationServiceService } from './notification-service.service';
 import { EmailService } from './notification-providers/Email.service';
-import { DatabaseModule, Notification } from '@app/database';
+import { DatabaseModule, Notification, Project } from '@app/database';
 import { AlertTriggeredEvent } from '@app/kafka-topics';
 import { describe, beforeEach, it, expect, afterEach, jest } from '@jest/globals';
 import { WebHookService } from './notification-providers/WebHook.service';
@@ -74,6 +74,7 @@ describe('NotificationServiceService', () => {
         channel: 'email',
         address: 'test@example.com',
         Alert: randomUUID(),
+        Project: randomUUID(),
       };
 
       const notification = new Notification();
@@ -88,6 +89,7 @@ describe('NotificationServiceService', () => {
         alert_id: data.Alert,
         channel: data.channel,
         address: data.address,
+        project: {id:data.Project},
       });
       expect(mockNotificationRepository.save).toHaveBeenCalledWith(notification);
       expect(mockEmailService.send).toHaveBeenCalledWith(
@@ -106,6 +108,7 @@ describe('NotificationServiceService', () => {
         channel: 'unsupported',
         address: 'test@example.com',
         Alert: randomUUID(),
+        Project: randomUUID(),
       };
 
       const notification = new Notification();
@@ -122,6 +125,7 @@ describe('NotificationServiceService', () => {
         status: 'PENDING',
         alert_id: data.Alert,
         address: data.address,
+        project: {id:data.Project},
       });
       expect(mockNotificationRepository.save).toHaveBeenCalledWith(notification);
       expect(mockEmailService.send).not.toHaveBeenCalled();
@@ -135,6 +139,7 @@ describe('NotificationServiceService', () => {
         channel: 'email',
         address: 'test@example.com',
         Alert: randomUUID(),
+        Project: randomUUID(),
       };
 
       // Exceed the rate limit

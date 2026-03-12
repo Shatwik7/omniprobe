@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Team } from './team.entity';
 import { Monitor } from './monitor.entity';
+import { Notification } from './notification.entity';
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 
 @Entity('projects')
@@ -36,6 +37,10 @@ export class Project {
   @ApiHideProperty()
   @OneToMany(() => Monitor, (monitor) => monitor.project)
   monitors!: Monitor[];
+
+  @ApiProperty()
+  @OneToMany(() => Notification, (notification) => notification.project)
+  notifications!: Notification[];
 
   @ApiProperty()
   @CreateDateColumn()

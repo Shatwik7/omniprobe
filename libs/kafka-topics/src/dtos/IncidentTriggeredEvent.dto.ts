@@ -17,10 +17,9 @@ export class IncidentTriggeredEvent {
 
     @IsString()
     @IsUUID()
-    @IsOptional()
-    Alert?: undefined | null;
+    Incident!: string;
 
     @IsString()
     @IsUUID()
-    Incident!: string;
+    Project!:string
 }

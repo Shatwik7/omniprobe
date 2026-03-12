@@ -108,6 +108,7 @@ describe('NotificationServiceController (e2e)', () => {
         message: 'This is a test alert',
         channel: 'email',
         address: 'test@example.com',
+        Project: uuidv4(),
       };
 
       await controller.handleAlertTriggered(data);
@@ -124,6 +125,7 @@ describe('NotificationServiceController (e2e)', () => {
         message: 'This is a test incident',
         channel: 'webhook',
         address: 'http://webhook.site',
+        Project: uuidv4(),
       };
 
       await controller.handleIncidentTriggered(data);

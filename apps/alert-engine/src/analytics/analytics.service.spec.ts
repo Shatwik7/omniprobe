@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsRepository } from './analytics.repository';
-import { Metric, Monitor, Analytics, AlertPolicy, Alert } from '@app/database';
+import { Metric, Monitor, Analytics, AlertPolicy, Alert, Project } from '@app/database';
 import { KafkaProducerService } from './kafka-producer.service';
 import { describe, beforeEach, it, expect, jest} from '@jest/globals';
 
@@ -428,8 +428,8 @@ describe('AnalyticsService', () => {
   describe('Alert creation workflow', () => {
     it('should create and emit alert when anomaly detected and no duplicate exists', async () => {
       // arrange
-      const metric: Metric = { total_time_ms: 100 } as any;
-      const monitor: Monitor = { id: mockMonitorId } as any;
+      const metric: Metric = { total_time_ms: 100, isSuccess: true } as any;
+      const monitor: Monitor = { id: mockMonitorId, project: { id: 'proj-1' } } as any;
       const policy: AlertPolicy = { notificationChannels: [{ channelType: 'email', address: 'foo@example.com' }] } as any;
 
       repository.getAnalyticsByMonitorAndRegion.mockResolvedValue(null);
@@ -465,6 +465,7 @@ describe('AnalyticsService', () => {
         address: 'foo@example.com',
         Alert: 'alert-id',
         title: expect.any(String),
+        Project: 'proj-1',
       });
     });
 
