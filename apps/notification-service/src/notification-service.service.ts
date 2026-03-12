@@ -6,6 +6,7 @@ import { AlertTriggeredEvent } from '@app/kafka-topics';
 import { EmailService } from './notification-providers/Email.service';
 import { WebHookService } from './notification-providers/WebHook.service';
 import { IncidentTriggeredEvent } from '@app/kafka-topics/dtos/IncidentTriggeredEvent.dto';
+import { LongPollingService } from '@app/common/long-polling/long-polling.service';
 
 @Injectable()
 export class NotificationServiceService {
@@ -17,6 +18,7 @@ export class NotificationServiceService {
     private readonly notificationRepository: Repository<Notification>,
     private readonly emailService: EmailService,
     private readonly webHookService: WebHookService,
+    private readonly longPollingService: LongPollingService,
   ) { }
 
   private isRateLimited(key: string): boolean {
@@ -64,6 +66,9 @@ export class NotificationServiceService {
       status: 'PENDING',
       alert_id: data.Alert,
       project: {id:data.Project},
+    });
+    this.longPollingService.publishUpdate(`notification:${data.Project}`, notification).catch(err => {
+      this.logger.error(`Failed to publish notification update for project ${data.Project}: ${err.message}`);
     });
     switch (data.channel) {
       case 'email':
@@ -113,6 +118,9 @@ export class NotificationServiceService {
       status: 'PENDING',
       incident_id: data.Incident,
       project: {id:data.Project},
+    });
+    this.longPollingService.publishUpdate(`notification:${data.Project}`, notification).catch(err => {
+      this.logger.error(`Failed to publish notification update for project ${data.Project}: ${err.message}`);
     });
     switch (data.channel) {
       case 'email':

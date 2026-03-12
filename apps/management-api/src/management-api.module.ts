@@ -10,6 +10,8 @@ import { MetricsModule } from './metrics/metrics.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AlertPolicyModule } from './alert-policy/alert-policy.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AlertsModule } from './alerts/alerts.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { AlertPolicyModule } from './alert-policy/alert-policy.module';
     IncidentsModule,
     NotificationsModule,
     AlertPolicyModule,
+    AnalyticsModule,
+    AlertsModule,
   ],
 })
 export class ManagementApiModule {}

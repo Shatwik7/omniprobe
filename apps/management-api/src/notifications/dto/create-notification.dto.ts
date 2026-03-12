@@ -4,11 +4,11 @@ import { IsOptional, IsString, IsUUID } from 'class-validator';
 export class CreateNotificationDto {
   @ApiProperty()
   @IsString()
-  channel: string;
+  channel!: string;
 
   @ApiProperty()
   @IsString()
-  recipient: string;
+  address!: string;
 
   @ApiProperty()
   @IsString()
@@ -17,5 +17,25 @@ export class CreateNotificationDto {
 
   @ApiProperty()
   @IsUUID()
-  incidentId: string;
+  @IsOptional()
+  incidentId?: string;
+
+  @ApiProperty()
+  @IsUUID()
+  @IsOptional()
+  alertId?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  message?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  title?: string;
+
+  @ApiProperty()
+  @IsUUID()
+  projectId!: string;
 }
