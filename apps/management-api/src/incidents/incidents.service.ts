@@ -22,9 +22,6 @@ export class IncidentsService {
       startedAt: createIncidentDto.startedAt,
       acknowledgedBy: { id: createIncidentDto.acknowledgedBy },
       monitor: { id: createIncidentDto.monitorId },
-      notifications: createIncidentDto.notifications.map((notif) => ({
-        id: notif,
-      })),
     });
     return this.IncidentRepo.save(Incident);
   }
@@ -40,7 +37,6 @@ export class IncidentsService {
         acknowledgedBy: true,
         monitor: true,
         metric: true,
-        notifications: true,
       },
     });
   }

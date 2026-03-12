@@ -1,9 +1,9 @@
 import { IsEnum, IsOptional, IsString, IsUUID } from "class-validator";
 
-export class AlertTriggeredEvent {
+export class IncidentTriggeredEvent {
 
     @IsString()
-    title!:string;
+    title!: string;
 
     @IsString()
     message!: string;
@@ -17,10 +17,10 @@ export class AlertTriggeredEvent {
 
     @IsString()
     @IsUUID()
-    Alert!: string;
+    @IsOptional()
+    Alert?: undefined | null;
 
     @IsString()
     @IsUUID()
-    @IsOptional()
-    Incident?: undefined | null;
+    Incident!: string;
 }

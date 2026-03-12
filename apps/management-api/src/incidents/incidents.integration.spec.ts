@@ -56,7 +56,6 @@ describe('Incidents Integration (controller + service + repository)', () => {
       severity: IncidentSeverity.CRITICAL,
       summary: 'Service down',
       monitorId: 'monitor-1',
-      notifications: [],
     };
 
     incidentRepositoryMock.create.mockReturnValueOnce({
@@ -105,7 +104,6 @@ describe('Incidents Integration (controller + service + repository)', () => {
         acknowledgedBy: true,
         metric: true,
         monitor: true,
-        notifications: true,
       },
     });
     expect(response).toEqual({ id: 'incident-1' });

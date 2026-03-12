@@ -10,7 +10,7 @@ export class KafkaProducerService {
 
   async emitAlertTriggered(data: AlertTriggeredEvent) {
     try {
-      this.kafkaClient.emit(Topics.ALERTS_TRIGGERED, data);
+      this.kafkaClient.emit(Topics.ALERTS_TRIGGERED_NOTIFICATIONS, data);
       return true;
     } catch (error) {
       console.error('Error emitting alert triggered event:', error);

@@ -10,7 +10,6 @@ import {
   OneToOne,
 } from 'typeorm';
 import { Monitor } from './monitor.entity';
-import { Notification } from './notification.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from './user.entity';
 import { Metric } from './metric.entity';
@@ -70,10 +69,6 @@ export class Incident {
   @OneToOne(() => Metric, { nullable: true })
   @JoinColumn({ name: 'metric_id' })
   metric?: Metric;
-
-  @ApiProperty()
-  @OneToMany(() => Notification, (notif) => notif.incident)
-  notifications!: Notification[];
 
   @ApiProperty()
   @CreateDateColumn()

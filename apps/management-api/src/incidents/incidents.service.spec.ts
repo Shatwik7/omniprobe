@@ -55,7 +55,6 @@ describe('IncidentsService', () => {
       severity: IncidentSeverity.CRITICAL,
       summary: 'Service down',
       monitorId: monitor_id,
-      notifications: [],
     };
 
     const created = { summary: 'Service down' } as Incident;
@@ -75,7 +74,6 @@ describe('IncidentsService', () => {
       startedAt: undefined,
       acknowledgedBy: { id: undefined },
       monitor: { id: monitor_id },
-      notifications: [],
     });
     expect(repository.save).toHaveBeenCalledWith(created);
     expect(response).toEqual(saved);
@@ -107,7 +105,6 @@ describe('IncidentsService', () => {
         acknowledgedBy: true,
         metric: true,
         monitor: true,
-        notifications: true,
       },
     });
     expect(response).toEqual(incident);
