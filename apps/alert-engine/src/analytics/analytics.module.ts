@@ -8,11 +8,19 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { KafkaProducerService } from './kafka-producer.service';
+import { LongPollingModule } from '@app/common';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    LongPollingModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        redisUrl: config.get<string>('REDIS_URL') || 'redis://localhost:6379',
+      }),
     }),
     DatabaseModule,
     // kafka producer client registration for alerts
@@ -64,4 +72,4 @@ import { KafkaProducerService } from './kafka-producer.service';
   ],
   exports: [AnalyticsRepository, AnalyticsService, KafkaProducerService],
 })
-export class AnalyticsModule {}
+export class AnalyticsModule { }

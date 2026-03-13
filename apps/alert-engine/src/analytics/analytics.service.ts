@@ -29,7 +29,7 @@ export class AnalyticsService {
   async processMetricAndUpdateAnalytics(
     newMetric: Metric,
     monitorId: string,
-    region: string,
+    region: string = 'IN',
     slaLatency: number = 2000,
     windowSize: number = 20,
   ): Promise<Analytics> {

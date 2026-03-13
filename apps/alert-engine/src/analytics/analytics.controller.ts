@@ -5,11 +5,16 @@ import { CreateAnalyticsDto } from './dto/create-analytics.dto';
 import { Topics } from '@app/kafka-topics';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { LongPollingService } from '@app/common/long-polling/long-polling.service';
 
 @Controller()
 export class AnalyticsController {
   private readonly logger = new Logger(AnalyticsController.name);
-  constructor(private readonly analyticsService: AnalyticsService) { }
+  constructor(
+    private readonly analyticsService: AnalyticsService,
+  
+    private readonly longPollingService: LongPollingService,
+  ) { }
 
   private parseToCreateAnalyticsDto(data: unknown): CreateAnalyticsDto | null {
     let parsedData: unknown = data;
@@ -48,6 +53,7 @@ export class AnalyticsController {
     const [alert, monitor, metric]=await Promise.all([this.analyticsService.getAlertPolicy(data.MonitorId),this.analyticsService.getMonitor(data.MonitorId), this.analyticsService.getMetric(data.MetricId)]);
     const sla_letency=alert.rules?.rules.find(a=>a.metric=="sla_latency")?.threshold as number;
     const analytics = await this.analyticsService.processMetricAndUpdateAnalytics(metric, monitor.id,data.Region, sla_letency);
+    await this.longPollingService.publishUpdate(`analytics:${monitor.id}`, analytics)
     return null;
   }
 }
