@@ -1,1 +1,1 @@
-export class Analytics {}
+export { Analytics } from '@app/database';
