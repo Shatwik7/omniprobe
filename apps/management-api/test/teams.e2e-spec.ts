@@ -184,9 +184,76 @@ describe('Teams (e2e, real app + real db)', () => {
 
     expect(updated.body).toEqual(
       expect.objectContaining({
-        affected: 1,
+        id: created.body.id,
+        name: updatedName,
       }),
     );
+  });
+
+  it('team creator should be able to add and remove members, but not themselves', async () => {
+    const owner = await createAuthenticatedUser();
+    const member = await createAuthenticatedUser();
+    const created = await createTeam(owner.token);
+
+    const added = await request(app.getHttpServer())
+      .put(`/teams/${created.body.id}/addUser`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ addUserId: member.userId })
+      .expect(200);
+
+    expect(added.body.members.map((user: { id: string }) => user.id)).toContain(
+      member.userId,
+    );
+
+    const memberTeams = await request(app.getHttpServer())
+      .get('/teams')
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(200);
+
+    expect(memberTeams.body.Teams.map((team: { id: string }) => team.id)).toContain(
+      created.body.id,
+    );
+
+    const removed = await request(app.getHttpServer())
+      .put(`/teams/${created.body.id}/addUser`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ removeUserId: member.userId })
+      .expect(200);
+
+    expect(removed.body.members.map((user: { id: string }) => user.id)).not.toContain(
+      member.userId,
+    );
+
+    await request(app.getHttpServer())
+      .put(`/teams/${created.body.id}/addUser`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ removeUserId: owner.userId })
+      .expect(400);
+  });
+
+  it('non-owner team member should not be able to add or remove members', async () => {
+    const owner = await createAuthenticatedUser();
+    const member = await createAuthenticatedUser();
+    const outsider = await createAuthenticatedUser();
+    const created = await createTeam(owner.token);
+
+    await request(app.getHttpServer())
+      .put(`/teams/${created.body.id}/addUser`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ addUserId: member.userId })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put(`/teams/${created.body.id}/addUser`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ addUserId: outsider.userId })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .put(`/teams/${created.body.id}/addUser`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send({ removeUserId: owner.userId })
+      .expect(403);
   });
 
   it('DELETE /teams/:id should return true then false on repeated delete', async () => {
@@ -202,6 +269,23 @@ describe('Teams (e2e, real app + real db)', () => {
       .delete(`/teams/${created.body.id}`)
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'false');
+  });
+
+  it('DELETE /teams/:id should return 403 for non-owner member', async () => {
+    const owner = await createAuthenticatedUser();
+    const member = await createAuthenticatedUser();
+    const created = await createTeam(owner.token);
+
+    await request(app.getHttpServer())
+      .put(`/teams/${created.body.id}/addUser`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ addUserId: member.userId })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/teams/${created.body.id}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
   });
 
   it('GET /teams should return 401 without bearer token', async () => {

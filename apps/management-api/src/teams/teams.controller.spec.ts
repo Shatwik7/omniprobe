@@ -3,6 +3,7 @@ import { TeamsController } from './teams.controller';
 import { TeamsService } from './teams.service';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { Team } from '@app/database';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 
 describe('TeamsController', () => {
   let controller: TeamsController;
@@ -81,23 +82,29 @@ describe('TeamsController', () => {
   });
 
   it('update should delegate to teamsService.update', async () => {
-    const updateResult = { affected: 1 };
+    const updateResult = { id: 'team-1', name: 'Platform' };
     teamsService.update.mockReturnValueOnce(Promise.resolve(updateResult));
 
-    const response = await controller.update('team-1', { name: 'Platform' });
+    const response = await controller.update(
+      'team-1',
+      { name: 'Platform' },
+      { user: { id: 'user-1' } },
+    );
 
     expect(teamsService.update).toHaveBeenCalledWith('team-1', {
       name: 'Platform',
-    });
+    }, 'user-1');
     expect(response).toEqual(updateResult);
   });
 
   it('remove should delegate to teamsService.remove', async () => {
     teamsService.remove.mockReturnValueOnce(Promise.resolve(true));
 
-    const response = await controller.remove('team-1');
+    const response = await controller.remove('team-1', {
+      user: { id: 'user-1' },
+    });
 
-    expect(teamsService.remove).toHaveBeenCalledWith('team-1');
+    expect(teamsService.remove).toHaveBeenCalledWith('team-1', 'user-1');
     expect(response).toBe(true);
   });
 });

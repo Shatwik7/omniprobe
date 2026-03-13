@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Project, Team } from '@app/database';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { Repository } from 'typeorm';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -12,6 +12,7 @@ describe('ProjectsService', () => {
     Repository<Project>,
     'create' | 'save' | 'find' | 'findOne' | 'delete'
   >;
+  let teamsRepository: Pick<Repository<Team>, 'findOne'>;
 
   const projectsRepositoryMock = {
     create: jest.fn(),
@@ -19,6 +20,10 @@ describe('ProjectsService', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     delete: jest.fn(),
+  };
+
+  const teamsRepositoryMock = {
+    findOne: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -31,19 +36,21 @@ describe('ProjectsService', () => {
         },
         {
           provide: getRepositoryToken(Team),
-          useValue: {},
+          useValue: teamsRepositoryMock,
         },
       ],
     }).compile();
 
     service = module.get<ProjectsService>(ProjectsService);
     projectsRepository = module.get(getRepositoryToken(Project));
+    teamsRepository = module.get(getRepositoryToken(Team));
 
     projectsRepositoryMock.create.mockReset();
     projectsRepositoryMock.save.mockReset();
     projectsRepositoryMock.find.mockReset();
     projectsRepositoryMock.findOne.mockReset();
     projectsRepositoryMock.delete.mockReset();
+    teamsRepositoryMock.findOne.mockReset();
   });
 
   it('should be defined', () => {
@@ -55,10 +62,18 @@ describe('ProjectsService', () => {
     const created = { name: 'P1' } as Project;
     const saved = { id: 'project-1', name: 'P1' } as Project;
 
+    teamsRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'team-1', createdBy: { id: 'user-1' } }),
+    );
     projectsRepositoryMock.create.mockReturnValueOnce(created);
     projectsRepositoryMock.save.mockReturnValueOnce(Promise.resolve(saved));
 
-    const response = await service.create(dto, 'team-1');
+    const response = await service.create(dto, 'team-1', 'user-1');
+
+    expect(teamsRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'team-1' },
+      relations: ['createdBy'],
+    });
 
     expect(projectsRepository.create).toHaveBeenCalledWith({
       name: 'P1',
@@ -67,6 +82,24 @@ describe('ProjectsService', () => {
     });
     expect(projectsRepository.save).toHaveBeenCalledWith(created);
     expect(response).toEqual(saved);
+  });
+
+  it('create should throw NotFoundException when team is missing', async () => {
+    teamsRepositoryMock.findOne.mockReturnValueOnce(Promise.resolve(null));
+
+    await expect(service.create({ name: 'P1', description: 'Desc' }, 'team-1', 'user-1')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('create should throw ForbiddenException when requester is not team creator', async () => {
+    teamsRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'team-1', createdBy: { id: 'owner-1' } }),
+    );
+
+    await expect(service.create({ name: 'P1', description: 'Desc' }, 'team-1', 'user-1')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('findAll should query projects by team id', async () => {
@@ -140,7 +173,7 @@ describe('ProjectsService', () => {
     );
 
     await expect(service.remove('project-1', 'user-2')).rejects.toThrow(
-      UnauthorizedException,
+      ForbiddenException,
     );
   });
 

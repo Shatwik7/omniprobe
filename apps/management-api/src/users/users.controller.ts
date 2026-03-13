@@ -12,7 +12,6 @@ import {
   ParseUUIDPipe,
   Query,
   ParseIntPipe,
-  UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -55,6 +54,15 @@ export class UsersController {
       throw new ForbiddenException();
     }
     return this.usersService.findAll(req.query.page, req.query.limit);
+  }
+
+  @Get('/users/search')
+  search(
+    @Request() req,
+    @Query('name') name: string,
+    @Query('email') email: string,
+  ) {
+    return this.usersService.search(name, email);
   }
 
   @Get('/me')

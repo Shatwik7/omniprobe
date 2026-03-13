@@ -147,6 +147,24 @@ describe('Projects (e2e, real app + real db)', () => {
     trackId(createdProjectIds, created.body.id);
   });
 
+  it('POST /teams/:teamId/projects should return 403 for team member who is not creator', async () => {
+    const owner = await createAuthenticatedUser();
+    const member = await createAuthenticatedUser();
+    const teamId = await createTeam(owner.token);
+
+    await request(app.getHttpServer())
+      .put(`/teams/${teamId}/addUser`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ addUserId: member.userId })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post(`/teams/${teamId}/projects`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .send(buildProjectPayload())
+      .expect(403);
+  });
+
   it('GET /teams/:teamId/projects should return projects for team', async () => {
     const auth = await createAuthenticatedUser();
     const teamId = await createTeam(auth.token);
@@ -232,6 +250,30 @@ describe('Projects (e2e, real app + real db)', () => {
       .delete(`/teams/${teamId}/projects/${created.body.id}`)
       .set('Authorization', `Bearer ${auth.token}`)
       .expect(200, 'false');
+  });
+
+  it('DELETE /teams/:teamId/projects/:id should return 403 for team member who is not creator', async () => {
+    const owner = await createAuthenticatedUser();
+    const member = await createAuthenticatedUser();
+    const teamId = await createTeam(owner.token);
+
+    await request(app.getHttpServer())
+      .put(`/teams/${teamId}/addUser`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ addUserId: member.userId })
+      .expect(200);
+
+    const created = await request(app.getHttpServer())
+      .post(`/teams/${teamId}/projects`)
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send(buildProjectPayload())
+      .expect(201);
+    trackId(createdProjectIds, created.body.id);
+
+    await request(app.getHttpServer())
+      .delete(`/teams/${teamId}/projects/${created.body.id}`)
+      .set('Authorization', `Bearer ${member.token}`)
+      .expect(403);
   });
 
   it('GET /teams/:teamId/projects should return 401 without token', async () => {

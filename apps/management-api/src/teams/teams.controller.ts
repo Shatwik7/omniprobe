@@ -60,13 +60,17 @@ export class TeamsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTeamDto: UpdateTeamDto,
+    @Request() req: { user: { id: string } },
   ) {
-    return this.teamsService.update(id, updateTeamDto);
+    return this.teamsService.update(id, updateTeamDto, req.user.id);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.teamsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.teamsService.remove(id, req.user.id);
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { User } from '@app/database';
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -27,6 +27,16 @@ export class UsersService {
 
   update(id: number, updateUserDto: UpdateUserDto) {
     return `This action updates a #${id} user`;
+  }
+
+  async search(name?: string, email?: string): Promise<User[]> {
+    return this.usersRepository.find({
+      where: [
+        { name: name ? ILike(`%${name}%`) : undefined },
+        { email: email ? ILike(`%${email}%`) : undefined },
+      ],
+      take: 10,
+    });
   }
 
   async remove(id: string): Promise<boolean> {

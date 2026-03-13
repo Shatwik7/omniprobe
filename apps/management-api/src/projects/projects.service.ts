@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { Project, Team } from '@app/database';
@@ -15,7 +19,26 @@ export class ProjectsService {
     private readonly teamsRepo: Repository<Team>,
   ) {}
 
-  create(createProjectDto: CreateProjectDto, teamId: string): Promise<Project> {
+  async create(
+    createProjectDto: CreateProjectDto,
+    teamId: string,
+    userId: string,
+  ): Promise<Project> {
+    const team = await this.teamsRepo.findOne({
+      where: { id: teamId },
+      relations: ['createdBy'],
+    });
+
+    if (!team) {
+      throw new NotFoundException('Team not found');
+    }
+
+    if (team.createdBy?.id !== userId) {
+      throw new ForbiddenException(
+        'Only the team creator can create projects for this team',
+      );
+    }
+
     const project = this.projectsRepo.create({
       name: createProjectDto.name,
       team: { id: teamId },
@@ -71,7 +94,7 @@ export class ProjectsService {
     }
 
     if (project.team?.createdBy?.id !== userId) {
-      throw new UnauthorizedException('User is not the owner of the project');
+      throw new ForbiddenException('Only the team creator can remove projects');
     }
 
     const { affected } = await this.projectsRepo.delete(id);

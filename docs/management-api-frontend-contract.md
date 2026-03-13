@@ -1,754 +1,1415 @@
-# Management API Frontend Contract
+# Management API Client REST Contract
 
-## 1) Overview
+## Overview
 
-This document describes the current Management API behavior from the actual NestJS controllers/services and e2e tests.
+This document is the client-facing REST API reference for the Management API in `apps/management-api`.
 
-- Service: Management API
-- Main module: [apps/management-api/src/management-api.module.ts](apps/management-api/src/management-api.module.ts)
-- Bootstrap: [apps/management-api/src/main.ts](apps/management-api/src/main.ts)
-- Swagger UI: /api/doc
-- Swagger JSON: /api/doc/json
-- Global validation:
-  - whitelist: true
-  - forbidNonWhitelisted: true
-  - transform: true
-  - stopAtFirstError: true
+It is based on the current NestJS controllers, DTOs, services, and e2e coverage in the repository.
 
-Important implication: unknown body fields are rejected with 400, and DTO validation errors return 400.
+Base assumptions:
 
----
+- Base URL: `http://<host>:<port>`
+- Default local port: `3000`
+- Swagger UI: `/api/doc`
+- Swagger JSON: `/api/doc/json`
 
-## 2) Auth and Access Model
+Global request validation:
 
-### 2.1 JWT auth
+- `whitelist: true`
+- `forbidNonWhitelisted: true`
+- `transform: true`
+- `stopAtFirstError: true`
 
-- Guard: [apps/management-api/src/auth/guards/jwt-auth.guard.ts](apps/management-api/src/auth/guards/jwt-auth.guard.ts)
-- Strategy: [apps/management-api/src/auth/strategies/jwt.strategy.ts](apps/management-api/src/auth/strategies/jwt.strategy.ts)
-- Token source: Authorization header as Bearer token
+Practical effect for clients:
 
-Expected header format:
+- Unknown request body fields are rejected with `400 Bad Request`
+- Invalid DTO fields are rejected with `400 Bad Request`
 
-- Authorization: Bearer <access_token>
+## Authentication And Authorization
 
-If missing/invalid, protected endpoints return 401 Unauthorized.
+### Bearer token
 
-### 2.2 Team membership auth
+Protected routes expect:
 
-- Guard: [apps/management-api/src/auth/guards/teamMember.guard.ts](apps/management-api/src/auth/guards/teamMember.guard.ts)
-- Applied on team-scoped routes.
+```http
+Authorization: Bearer <access_token>
+```
 
-Behavior:
-- 400 Bad Request if teamId route param is missing/invalid UUID
-- 403 Forbidden if authenticated user is not a creator/member of the team
+If the token is missing or invalid, the API returns `401 Unauthorized`.
 
-### 2.3 Local login auth
+### Guards used by the API
 
-- Guard: [apps/management-api/src/auth/guards/local-auth.guard.ts](apps/management-api/src/auth/guards/local-auth.guard.ts)
-- Strategy: [apps/management-api/src/auth/strategies/local.strategy.ts](apps/management-api/src/auth/strategies/local.strategy.ts)
+- `JwtAuthGuard`: requires a valid authenticated user
+- `TeamMemberGuard`: requires the authenticated user to belong to the team in `:teamId`
 
-Behavior:
-- Reads email/password from request body
-- 401 Unauthorized if credentials are invalid
+### Ownership rules
 
----
+The following ownership rules are currently enforced:
 
-## 3) Shared Data Shapes (Response Entities)
+- Team creator (`team.createdBy`) is the only user allowed to:
+  - add members to a team
+  - remove members from a team
+  - rename a team through the update route
+  - delete a team
+  - create projects in that team
+  - remove projects from that team
+- The team creator cannot remove themselves from the team
+- Regular team members can still access team-scoped resources guarded by `TeamMemberGuard`, but they cannot perform owner-only operations above
 
-These are common response shapes returned by services.
+## Shared Response DTOs
 
-### User
-Source: [libs/database/src/entity/user.entity.ts](libs/database/src/entity/user.entity.ts)
+These are the main response shapes returned by the API.
 
-- id: string (uuid)
-- email: string
-- name: string
-- createdAt: string (datetime)
-- updatedAt: string (datetime)
-- password is excluded from response
+### `User`
 
-### Team
-Source: [libs/database/src/entity/team.entity.ts](libs/database/src/entity/team.entity.ts)
-
-- id: string (uuid)
-- name: string
-- createdAt: string (datetime)
-- updatedAt: string (datetime)
-
-### Project
-Source: [libs/database/src/entity/project.entity.ts](libs/database/src/entity/project.entity.ts)
-
-- id: string (uuid)
-- name: string
-- description: string | null
-- createdAt: string (datetime)
-- updatedAt: string (datetime)
-
-### Monitor
-Source: [libs/database/src/entity/monitor.entity.ts](libs/database/src/entity/monitor.entity.ts)
-
-- id: string (uuid)
-- name: string
-- target: string (url)
-- method: GET | POST | PATCH | DELETE | PUT
-- frequencySeconds: number
-- isLive: boolean
-- isActive: boolean
-- headers: object | null
-- body: string | null
-- maintencePeriods: array | null
-- expectedStatus: number
-- expectedBody: object | null
-- createdAt: string (datetime)
-- updatedAt: string (datetime)
-
-### Metric
-Source: [libs/database/src/entity/metric.entity.ts](libs/database/src/entity/metric.entity.ts)
-
-- id: string (uuid)
-- durationMs: number
-- statusCode: number
-- breakdown: object
-- dns_response_time_ms: number
-- tcp_connection_time_ms: number
-- tls_handshake_time_ms: number
-- time_to_first_byte_ms: number
-- server_processing_time_ms: number
-- content_transfer_time_ms: number
-- total_time_ms: number
-- region: NA | EU | IN | AU
-- isSuccess: boolean
-- responseBody: string (stored as create date column in current code)
-- createdAt: string (datetime)
-
-### Incident
-Source: [libs/database/src/entity/incident.entity.ts](libs/database/src/entity/incident.entity.ts)
-
-- id: string (uuid)
-- status: OPEN | ACKNOWLEDGED | RESOLVED
-- severity: CRITICAL | WARNING
-- summary: string | null
-- resolvedAt: string | null
-- acknowledgedAt: string | null
-- acknowledgedBy: User | null
-- monitor: Monitor
-- metric: Metric | null
-- notifications: Notification[]
-- startedAt: string (datetime)
-- updatedAt: string (datetime)
-
-### Notification
-Source: [libs/database/src/entity/notification.entity.ts](libs/database/src/entity/notification.entity.ts)
-
-- id: string (uuid)
-- channel: string
-- recipient: string
-- status: PENDING | SENT | FAILED | SEEN
-- incident: Incident | null
-- message: string | null
-- title: string | null
-- sentAt: string (datetime)
-
-### AlertPolicy
-Source: [libs/database/src/entity/alert-policy.entity.ts](libs/database/src/entity/alert-policy.entity.ts)
-
-- id: string (uuid)
-- name: string
-- rules: object
-- notificationChannels: object | null
-- createdAt: string (datetime)
-- updatedAt: string (datetime)
-
----
-
-## 4) DTO Contracts (Request Bodies)
-
-### Auth
-
-#### SignUpDto
-Source: [apps/management-api/src/auth/dto/signup.dto.ts](apps/management-api/src/auth/dto/signup.dto.ts)
-
+```json
 {
-  "name": "string (required, non-empty)",
-  "email": "string (required, email)",
-  "password": "string (required, min length 6)"
+  "id": "uuid",
+  "email": "string",
+  "name": "string",
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
 }
+```
 
-#### SignInDto
-Source: [apps/management-api/src/auth/dto/sign-in.dto.ts](apps/management-api/src/auth/dto/sign-in.dto.ts)
+Notes:
 
+- `password` is never exposed in responses
+
+### `SignInDtoResponse`
+
+```json
 {
-  "email": "string (required, email)",
-  "password": "string (required, min length 6)"
+  "access_token": "jwt-string"
 }
+```
 
-#### SignInDtoResponse
-Source: [apps/management-api/src/auth/dto/sign-in-response.dto.ts](apps/management-api/src/auth/dto/sign-in-response.dto.ts)
+### `Team`
 
+Typical response shape:
+
+```json
 {
-  "access_token": "string"
+  "id": "uuid",
+  "name": "string",
+  "createdAt": "datetime",
+  "updatedAt": "datetime",
+  "createdBy": {
+    "id": "uuid",
+    "name": "string",
+    "email": "string"
+  },
+  "members": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "email": "string"
+    }
+  ]
 }
+```
 
-### Teams
+### `TeamListResponse`
 
-#### CreateTeamDto
-Source: [apps/management-api/src/teams/dto/create-team.dto.ts](apps/management-api/src/teams/dto/create-team.dto.ts)
-
+```json
 {
-  "name": "string (required)"
+  "Teams": ["Team"],
+  "Count": 1
 }
+```
 
-#### UpdateTeamDto
-Source: [apps/management-api/src/teams/dto/update-team.dto.ts](apps/management-api/src/teams/dto/update-team.dto.ts)
+### `Project`
 
-Partial of CreateTeamDto.
+Typical response shape:
 
-### Projects
-
-#### CreateProjectDto
-Source: [apps/management-api/src/projects/dto/create-project.dto.ts](apps/management-api/src/projects/dto/create-project.dto.ts)
-
+```json
 {
-  "name": "string (required, min length 3)",
-  "description": "string (required, max length 255)"
+  "id": "uuid",
+  "name": "string",
+  "description": "string",
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
 }
+```
 
-#### UpdateProjectDto
-Source: [apps/management-api/src/projects/dto/update-project.dto.ts](apps/management-api/src/projects/dto/update-project.dto.ts)
+### `Monitor`
 
-Partial of CreateProjectDto.
-
-### Monitors
-
-#### CreateMonitorDto
-Source: [apps/management-api/src/monitors/dto/create-monitor.dto.ts](apps/management-api/src/monitors/dto/create-monitor.dto.ts)
-
+```json
 {
-  "name": "string (required)",
-  "target": "string (required, URL)",
+  "id": "uuid",
+  "name": "string",
+  "target": "https://example.com",
+  "method": "GET",
+  "frequencySeconds": 60,
+  "isLive": true,
+  "isActive": true,
+  "headers": {},
+  "body": "",
+  "maintencePeriods": [],
+  "expectedStatus": 200,
+  "expectedBody": null,
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
+}
+```
+
+### `Metric`
+
+```json
+{
+  "id": "uuid",
+  "durationMs": 120,
+  "statusCode": 200,
+  "breakdown": {
+    "dns": 5,
+    "tcp": 10,
+    "tls": 15,
+    "ttfb": 30,
+    "spt": 35,
+    "ctt": 25
+  },
+  "dns_response_time_ms": 5,
+  "tcp_connection_time_ms": 10,
+  "tls_handshake_time_ms": 15,
+  "time_to_first_byte_ms": 30,
+  "server_processing_time_ms": 35,
+  "content_transfer_time_ms": 25,
+  "total_time_ms": 120,
+  "region": "IN",
+  "isSuccess": true,
+  "responseBody": "optional",
+  "createdAt": "datetime"
+}
+```
+
+### `Alert`
+
+```json
+{
+  "id": "uuid",
+  "type": "ANOMALY",
+  "message": "string",
+  "metadata": {},
+  "monitor": { "id": "uuid" },
+  "metric": { "id": "uuid" },
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
+}
+```
+
+### `Analytics`
+
+```json
+{
+  "id": "uuid",
+  "monitor": { "id": "uuid" },
+  "region": "EU",
+  "rollingAverage": 120.5,
+  "rollingStdDev": 15.2,
+  "variance": 231.04,
+  "p95": 180,
+  "p99": 210,
+  "anomalyDetected": false,
+  "degradingComponent": null,
+  "networkRatio": 0.4,
+  "backendRatio": 0.6,
+  "forecast": {
+    "totalPrediction": [125, 130],
+    "confidenceUpper": [140, 145],
+    "confidenceLower": [110, 115]
+  },
+  "predictedSlaBreach": false,
+  "errorRate": 0.02,
+  "trend": "stable",
+  "recentMetrics": [],
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
+}
+```
+
+### `MonitorAvailability`
+
+```json
+{
+  "availability": 99.97,
+  "downtime": 30000
+}
+```
+
+Notes:
+
+- `availability` is a percentage from `0` to `100`
+- `downtime` is returned in milliseconds
+
+### `Incident`
+
+```json
+{
+  "id": "uuid",
+  "status": "OPEN",
+  "severity": "CRITICAL",
+  "summary": "string",
+  "resolvedAt": null,
+  "acknowledgedAt": null,
+  "startedAt": "datetime",
+  "acknowledgedBy": { "id": "uuid" },
+  "monitor": { "id": "uuid" },
+  "metric": null,
+  "updatedAt": "datetime"
+}
+```
+
+### `Notification`
+
+```json
+{
+  "id": "uuid",
+  "channel": "SLACK",
+  "address": "#alerts",
+  "status": "PENDING",
+  "message": "string",
+  "title": "string",
+  "sentAt": "datetime"
+}
+```
+
+### `AlertPolicy`
+
+```json
+{
+  "id": "uuid",
+  "name": "string",
+  "rules": {},
+  "notificationChannels": [],
+  "createdAt": "datetime",
+  "updatedAt": "datetime"
+}
+```
+
+### Common delete responses
+
+Different modules return different delete responses:
+
+- plain boolean: `true` / `false`
+- object response for alerts: `{ "deleted": true }`
+
+### Long-poll timeout responses
+
+- Alerts `/poll`: `404 Not Found` with timeout message
+- Analytics `/poll`: `404 Not Found` with timeout message
+- Metrics `/poll`: `404 Not Found` with timeout message
+- Notifications `/poll`: returns `200 OK` with `null` on timeout
+
+## Request DTOs
+
+### Auth DTOs
+
+#### `SignUpDto`
+
+```json
+{
+  "name": "string, required",
+  "email": "string, required, valid email",
+  "password": "string, required, min length 6"
+}
+```
+
+#### `SignInDto`
+
+```json
+{
+  "email": "string, required, valid email",
+  "password": "string, required, min length 6"
+}
+```
+
+### Teams DTOs
+
+#### `CreateTeamDto`
+
+```json
+{
+  "name": "string, required"
+}
+```
+
+#### `UpdateTeamDto`
+
+```json
+{
+  "name": "string, optional",
+  "addUserId": "uuid, optional",
+  "removeUserId": "uuid, optional"
+}
+```
+
+Rules:
+
+- send only one of `addUserId` or `removeUserId` in the same request
+- `removeUserId` cannot be the team creator's own user id
+
+### Projects DTOs
+
+#### `CreateProjectDto`
+
+```json
+{
+  "name": "string, required, min length 3",
+  "description": "string, required, max length 255"
+}
+```
+
+#### `UpdateProjectDto`
+
+Partial of `CreateProjectDto`.
+
+Note:
+
+- `PATCH /teams/:teamId/projects/:id` is currently still a placeholder implementation and returns a string response instead of updating the record.
+
+### Monitors DTOs
+
+#### `CreateMonitorDto`
+
+```json
+{
+  "name": "string, required",
+  "target": "string, required, valid URL",
   "method": "GET | POST | PATCH | DELETE | PUT",
-  "frequencySeconds": "number (int)",
-  "projectId": "string (uuid)",
-  "alertPolicyId": "string (optional)"
+  "frequencySeconds": "integer, required",
+  "projectId": "uuid, required",
+  "alertPolicyId": "string, optional"
 }
+```
 
-#### UpdateMonitorDto
-Source: [apps/management-api/src/monitors/dto/update-monitor.dto.ts](apps/management-api/src/monitors/dto/update-monitor.dto.ts)
+#### `UpdateMonitorDto`
 
-Partial of CreateMonitorDto.
+Partial of `CreateMonitorDto`.
 
-### Metrics
+### Metrics DTOs
 
-#### CreateMetricDto
-Source: [apps/management-api/src/metrics/dto/create-metric.dto.ts](apps/management-api/src/metrics/dto/create-metric.dto.ts)
+#### `CreateMetricDto`
 
+```json
 {
-  "durationMs": "number (int)",
-  "statusCode": "number (int)",
-  "dns_response_time_ms": "number (int)",
-  "tcp_connection_time_ms": "number (int)",
-  "tls_handshake_time_ms": "number (int)",
-  "time_to_first_byte_ms": "number (int)",
-  "server_processing_time_ms": "number (int)",
-  "content_transfer_time_ms": "number (int)",
-  "total_time_ms": "number (int)",
+  "durationMs": "integer",
+  "statusCode": "integer",
+  "dns_response_time_ms": "integer",
+  "tcp_connection_time_ms": "integer",
+  "tls_handshake_time_ms": "integer",
+  "time_to_first_byte_ms": "integer",
+  "server_processing_time_ms": "integer",
+  "content_transfer_time_ms": "integer",
+  "total_time_ms": "integer",
   "region": "NA | EU | IN | AU",
   "isSuccess": "boolean",
-  "monitorId": "string (uuid)"
+  "monitorId": "uuid"
 }
+```
 
-#### UpdateMetricDto
-Source: [apps/management-api/src/metrics/dto/update-metric.dto.ts](apps/management-api/src/metrics/dto/update-metric.dto.ts)
+#### `UpdateMetricDto`
 
-Partial of CreateMetricDto.
+Partial of `CreateMetricDto`.
 
-### Incidents
+### Alerts DTOs
 
-#### CreateIncidentDto
-Source: [apps/management-api/src/incidents/dto/create-incident.dto.ts](apps/management-api/src/incidents/dto/create-incident.dto.ts)
+#### `CreateAlertDto`
 
+```json
+{
+  "type": "ANOMALY | SLA_BREACH | ERROR_RATE | DEGRADATION",
+  "message": "string, required",
+  "metadata": "object, optional",
+  "monitorId": "uuid, required",
+  "metricId": "uuid, optional"
+}
+```
+
+#### `UpdateAlertDto`
+
+Partial of `CreateAlertDto`.
+
+### Analytics DTOs
+
+#### `CreateAnalyticsDto`
+
+```json
+{
+  "monitorId": "uuid, required",
+  "region": "string, required",
+  "rollingAverage": "number, optional",
+  "rollingStdDev": "number, optional",
+  "variance": "number, optional",
+  "p95": "number, optional",
+  "p99": "number, optional",
+  "anomalyDetected": "boolean, optional",
+  "degradingComponent": "string | null, optional",
+  "networkRatio": "number, optional",
+  "backendRatio": "number, optional",
+  "forecast": {
+    "totalPrediction": ["number"],
+    "confidenceUpper": ["number"],
+    "confidenceLower": ["number"]
+  },
+  "predictedSlaBreach": "boolean, optional",
+  "errorRate": "number, optional",
+  "trend": "string, optional",
+  "recentMetrics": []
+}
+```
+
+#### `UpdateAnalyticsDto`
+
+Partial of `CreateAnalyticsDto`.
+
+### Incident DTOs
+
+#### `CreateIncidentDto`
+
+```json
 {
   "status": "OPEN | ACKNOWLEDGED | RESOLVED",
   "severity": "CRITICAL | WARNING",
-  "summary": "string",
-  "resolvedAt": "Date (optional)",
-  "acknowledgedAt": "Date (optional)",
-  "startedAt": "Date (optional)",
-  "acknowledgedBy": "string (uuid, optional)",
-  "monitorId": "string (uuid)",
-  "notifications": "string[]"
+  "summary": "string, required",
+  "resolvedAt": "Date, optional",
+  "acknowledgedAt": "Date, optional",
+  "startedAt": "Date, optional",
+  "acknowledgedBy": "uuid, optional",
+  "monitorId": "uuid, required",
+  "notifications": ["string"]
 }
+```
 
-#### UpdateIncidentDto
-Source: [apps/management-api/src/incidents/dto/update-incident.dto.ts](apps/management-api/src/incidents/dto/update-incident.dto.ts)
+#### `UpdateIncidentDto`
 
-Partial of CreateIncidentDto.
+Partial of `CreateIncidentDto`.
 
-### Notifications
+Note:
 
-#### CreateNotificationDto
-Source: [apps/management-api/src/notifications/dto/create-notification.dto.ts](apps/management-api/src/notifications/dto/create-notification.dto.ts)
+- `PATCH /incidents/:id` is currently a placeholder implementation and returns a string response instead of updating the record.
 
+### Notification DTOs
+
+#### `CreateNotificationDto`
+
+```json
 {
-  "channel": "string",
-  "recipient": "string",
-  "status": "string (optional)",
-  "incidentId": "string (uuid)"
+  "channel": "string, required",
+  "address": "string, required",
+  "status": "string, optional",
+  "incidentId": "uuid, optional",
+  "alertId": "uuid, optional",
+  "message": "string, optional",
+  "title": "string, optional",
+  "projectId": "uuid, required"
 }
+```
 
-#### UpdateNotificationDto
-Source: [apps/management-api/src/notifications/dto/update-notification.dto.ts](apps/management-api/src/notifications/dto/update-notification.dto.ts)
+#### `UpdateNotificationDto`
 
-Empty DTO (no fields currently defined).
+Partial of `CreateNotificationDto`.
 
-### Alert policy
+### Alert Policy DTOs
 
-#### CreateAlertPolicyDto
-Source: [apps/management-api/src/alert-policy/dto/create-alert-policy.dto.ts](apps/management-api/src/alert-policy/dto/create-alert-policy.dto.ts)
+#### `CreateAlertPolicyDto`
 
-Empty DTO (no fields currently defined).
-
-#### UpdateAlertPolicyDto
-Source: [apps/management-api/src/alert-policy/dto/update-alert-policy.dto.ts](apps/management-api/src/alert-policy/dto/update-alert-policy.dto.ts)
-
-Empty DTO (no fields currently defined).
-
----
-
-## 5) Endpoint-by-Endpoint Contract
-
-## 5.1 Auth + Users
-Controller: [apps/management-api/src/users/users.controller.ts](apps/management-api/src/users/users.controller.ts)
-
-### POST /signup
-- Auth: Public
-- Body: SignUpDto
-- Success:
-  - 201 Created
-  - Body: Partial User (without password)
-- Errors:
-  - 400 validation errors
-  - 401 when email already exists (message: User already exists)
-
-### POST /signin
-- Auth: LocalAuthGuard (email/password)
-- Body: SignInDto
-- Success:
-  - 201 Created
-  - Body: SignInDtoResponse
-- Errors:
-  - 401 invalid credentials
-
-### GET /
-- Auth: Public in current code
-- Query:
-  - take: number (ParseIntPipe), default 10
-  - skip: number (ParseIntPipe), default 0
-- Success:
-  - 200 OK
-  - Body: currently undefined due to service bug in findAll implementation
-- Errors:
-  - 403 if take > 100
-  - 400 if take/skip are not numeric
-
-### GET /me
-- Auth: JWT
-- Success:
-  - 200 OK
-  - Body: User
-- Errors:
-  - 401 invalid/missing token
-
-### GET /users/:id
-- Auth: Public in current code
-- Params:
-  - id: uuid
-- Success:
-  - 200 OK
-  - Body: User | null
-- Errors:
-  - 400 invalid UUID
-
-### PATCH /users/:id
-- Auth: Public in current code
-- Body: UpdateUserDto
-- Success:
-  - 200 OK
-  - Body text: This action updates a #NaN user (placeholder implementation)
-
-### DELETE /users/:id
-- Auth: Public in current code
-- Success:
-  - 200 OK
-  - Body: "true" or "false" (stringified boolean)
-
-## 5.2 Teams
-Controller: [apps/management-api/src/teams/teams.controller.ts](apps/management-api/src/teams/teams.controller.ts)
-
-### POST /teams
-- Auth: JWT
-- Body: CreateTeamDto
-- Success:
-  - 201 Created
-  - Body: Team
-- Errors:
-  - 401 invalid/missing token
-  - 400 validation
-
-### GET /teams
-- Auth: JWT
-- Success:
-  - 200 OK
-  - Body:
-    {
-      "Teams": Team[],
-      "Count": number
+```json
+{
+  "name": "string, required",
+  "rules": {
+    "version": "1.0",
+    "rules": [
+      {
+        "metric": "string",
+        "operator": "> | < | = | >= | <=",
+        "threshold": "number | boolean",
+        "window": "string, optional"
+      }
+    ],
+    "logic": "AND | OR",
+    "actions": ["string"],
+    "suppression": {
+      "cooldown": "string, optional",
+      "maintenance": [
+        {
+          "start": "string",
+          "end": "string"
+        }
+      ]
     }
-- Errors:
-  - 401 invalid/missing token
-
-### GET /teams/:id
-- Auth: JWT
-- Params: id uuid
-- Success: 200 with Team | null
-- Errors:
-  - 401 invalid/missing token
-  - 400 invalid UUID
-
-### PUT /teams/:id/addUser
-- Auth: JWT
-- Body: UpdateTeamDto (partial)
-- Success:
-  - 200 OK
-  - Body: TypeORM UpdateResult (example has affected: 1)
-
-### DELETE /teams/:id
-- Auth: JWT
-- Success:
-  - 200 OK
-  - Body: "true" or "false"
-
-## 5.3 Projects
-Controller: [apps/management-api/src/projects/projects.controller.ts](apps/management-api/src/projects/projects.controller.ts)
-
-Base path: /teams/:teamId/projects
-
-All endpoints are JWT + TeamMemberGuard.
-
-### POST /teams/:teamId/projects
-- Body: CreateProjectDto
-- Success:
-  - 201 Created
-  - Body: Project
-- Errors:
-  - 401 unauthorized
-  - 403 not a team member
-  - 400 validation / invalid UUID
-
-### GET /teams/:teamId/projects
-- Success:
-  - 200 OK
-  - Body: Project[]
-
-### GET /teams/:teamId/projects/:id
-- Success:
-  - 200 OK
-  - Body: Project (includes selected team and monitors relations)
-- Errors:
-  - 404 Project not found
-
-### PATCH /teams/:teamId/projects/:id
-- Body: UpdateProjectDto
-- Success:
-  - 200 OK
-  - Body text: This action updates a #NaN project (placeholder)
-
-### DELETE /teams/:teamId/projects/:id
-- Success:
-  - 200 OK
-  - Body: "true" or "false"
-- Errors:
-  - 401 if not owner when deleting existing project
-
-## 5.4 Monitors
-Controller: [apps/management-api/src/monitors/monitors.controller.ts](apps/management-api/src/monitors/monitors.controller.ts)
-
-Base path: /teams/:teamId/projects/:projectId/monitors
-
-All endpoints are JWT, and all handlers apply TeamMemberGuard.
-
-### POST /teams/:teamId/projects/:projectId/monitors
-- Body: CreateMonitorDto
-- Success:
-  - 201 Created
-  - Body: Monitor
-
-### GET /teams/:teamId/projects/:projectId/monitors
-- Success:
-  - 200 OK
-  - Body: Monitor[] (selected fields)
-
-### GET /teams/:teamId/projects/:projectId/monitors/:id
-- Success:
-  - 200 OK
-  - Body: Monitor | null (includes project and alertPolicy selected fields)
-
-### PATCH /teams/:teamId/projects/:projectId/monitors/:id
-- Body: UpdateMonitorDto
-- Success:
-  - 200 OK
-  - Body: updated Monitor | null
-
-### DELETE /teams/:teamId/projects/:projectId/monitors/:id
-- Success:
-  - 200 OK
-  - Body: "true" or "false"
-
-## 5.5 Metrics (includes long polling)
-Controller: [apps/management-api/src/metrics/metrics.controller.ts](apps/management-api/src/metrics/metrics.controller.ts)
-
-Base path: /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics
-
-All endpoints are JWT; create/findAll/poll also require TeamMemberGuard.
-
-### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics
-- Body: CreateMetricDto
-- Success:
-  - 201 Created
-  - Body: Metric
-- Side-effect:
-  - Publishes update into long polling channel by monitorId
-
-### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics
-- Query params:
-  - beginDate: ISO string/date
-  - endDate: ISO string/date
-  - region: string
-- Success:
-  - 200 OK
-  - Body: Metric[]
-- Errors:
-  - 406 if monitor does not belong to project
-
-### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/poll
-- Purpose: long-poll endpoint for near-real-time metric updates
-- Success:
-  - 200 OK
-  - Body: update payload published by POST metrics (CreateMetricDto-like object)
-- Errors:
-  - 404 Long polling timed out
-  - 406 if monitor does not belong to project
-
-### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id
-- Success: 200 with Metric | null
-
-### PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id
-- Body: UpdateMetricDto
-- Success: 200 with updated Metric | null
-
-### DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id
-- Success: 200 with "true" or "false"
-
-## 5.6 Incidents
-Controller: [apps/management-api/src/incidents/incidents.controller.ts](apps/management-api/src/incidents/incidents.controller.ts)
-
-Base path: /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents
-
-All endpoints are JWT. All handlers use TeamMemberGuard.
-
-### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents
-- Body: CreateIncidentDto
-- Success: 201 with Incident
-
-### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents
-- Success: 200 with Incident[]
-
-### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id
-- Success: 200 with Incident | null (includes acknowledgedBy, monitor, metric, notifications)
-
-### PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id
-- Body: UpdateIncidentDto
-- Success:
-  - 200 with text: This action updates a #NaN incident (placeholder)
-
-### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/acknowledge
-- Body (optional):
-  {
-    "userId": "uuid (optional)"
-  }
-- Success: 200 with UpdateResult
-- Effect:
-  - status -> ACKNOWLEDGED
-  - acknowledgedAt set
-  - acknowledgedBy set from body.userId or token user
-
-### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/resolve
-- Success: 200 with UpdateResult
-- Effect:
-  - status -> RESOLVED
-  - resolvedAt set
-
-### DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id
-- Success: 200 with "true" or "false"
-
-## 5.7 Notifications
-Controller: [apps/management-api/src/notifications/notifications.controller.ts](apps/management-api/src/notifications/notifications.controller.ts)
-
-Base path: /teams/:teamId/projects/:projectId/notifications
-
-All endpoints use JWT + TeamMemberGuard.
-
-Current implementation status:
-- Methods are scaffold placeholders that return strings, not real Notification entities.
-
-### POST /teams/:teamId/projects/:projectId/notifications
-- Body: CreateNotificationDto
-- Success: 201 with text message placeholder
-
-### GET /teams/:teamId/projects/:projectId/notifications
-- Success: 200 with text placeholder
-
-### GET /teams/:teamId/projects/:projectId/notifications/:id
-- Success: 200 with text placeholder
-
-### PATCH /teams/:teamId/projects/:projectId/notifications/:id
-- Body: UpdateNotificationDto (empty)
-- Success: 200 with text placeholder
-
-### DELETE /teams/:teamId/projects/:projectId/notifications/:id
-- Success: 200 with text placeholder
-
-## 5.8 Alert Policy
-Controller: [apps/management-api/src/alert-policy/alert-policy.controller.ts](apps/management-api/src/alert-policy/alert-policy.controller.ts)
-
-Base path: /alert-policy
-
-All endpoints use JWT + TeamMemberGuard.
-
-Current implementation status:
-- Methods are scaffold placeholders that return strings, not real AlertPolicy entities.
-
-### POST /alert-policy
-- Body: CreateAlertPolicyDto (empty)
-- Success: 201 with text placeholder
-
-### GET /alert-policy
-- Success: 200 with text placeholder
-
-### GET /alert-policy/:id
-- Success: 200 with text placeholder
-
-### PATCH /alert-policy/:id
-- Body: UpdateAlertPolicyDto (empty)
-- Success: 200 with text placeholder
-
-### DELETE /alert-policy/:id
-- Success: 200 with text placeholder
-
----
-
-## 6) Long Polling Details (Frontend Integration)
-
-Long polling component exists in metrics flow:
-
-- Controller usage: [apps/management-api/src/metrics/metrics.controller.ts](apps/management-api/src/metrics/metrics.controller.ts)
-- Service implementation: [libs/common/src/long-polling/long-polling.service.ts](libs/common/src/long-polling/long-polling.service.ts)
-- Module wiring: [apps/management-api/src/metrics/metrics.module.ts](apps/management-api/src/metrics/metrics.module.ts)
-
-### Flow
-1. Frontend calls GET /metrics/poll for a monitor.
-2. Backend waits up to 30 seconds for update (Redis pub/sub channel updates:monitor:{monitorId}).
-3. If metric POST arrives, backend responds 200 immediately with payload.
-4. If timeout, backend responds 404 with message Long polling timed out.
-
-### Frontend recommended polling pattern
-- Issue poll request immediately after previous poll resolves.
-- On 200: process payload and instantly reconnect.
-- On 404 timeout: reconnect immediately (or with tiny backoff).
-- On 401/403: stop polling and re-auth/re-authorize.
-- On 406: monitor/project mismatch; refresh selected monitor context.
-
----
-
-## 7) Known Contract Gaps / Caveats (Important for frontend)
-
-1. Placeholder endpoints
-- Users PATCH, Projects PATCH, Incidents PATCH return placeholder text strings.
-- Notifications and AlertPolicy modules are scaffold responses (string messages only).
-
-2. Boolean responses are plain text
-- Several DELETE endpoints return "true" / "false" text instead of JSON boolean.
-
-3. Root GET /
-- Current users list endpoint uses take/skip validation but service returns undefined.
-
-4. Inconsistent route auth
-- Some user routes are public in current code (GET /users/:id, PATCH/DELETE /users/:id, GET /).
-- If frontend assumes strict auth everywhere, align with backend team before production.
-
-5. UUID casting issues in placeholders
-- Some patch handlers cast uuid to number internally, causing placeholder text with NaN.
-
----
-
-## 8) Error Envelope Reference
-
-Typical Nest error format:
-
-{
-  "statusCode": 400,
-  "message": ["validation message"],
-  "error": "Bad Request"
+  },
+  "notificationChannels": [
+    {
+      "channelType": "slack | email | phone | webhook | sms | push | whatsapp",
+      "address": "string"
+    }
+  ]
 }
+```
 
-Other common statuses in this API:
-- 401 Unauthorized
-- 403 Forbidden
-- 404 Not Found
-- 406 Not Acceptable
+#### `UpdateAlertPolicyDto`
 
----
+Partial of `CreateAlertPolicyDto`.
 
-## 9) Quick Frontend Checklist
+### User DTOs
 
-- Use Bearer token for all protected endpoints.
-- Treat DELETE responses as text values "true" / "false".
-- For long polling, use GET /metrics/poll loop with timeout retry.
-- Handle placeholder endpoints as temporary contracts (string responses).
-- Validate UUID route params client-side to reduce 400s.
-- For team-scoped routes, expect 403 if user is not in team.
+#### `UpdateUserDto`
 
----
+Partial of `CreateUserDto`.
 
-## 10) Source Index
+Note:
 
-Controllers:
-- [apps/management-api/src/users/users.controller.ts](apps/management-api/src/users/users.controller.ts)
-- [apps/management-api/src/teams/teams.controller.ts](apps/management-api/src/teams/teams.controller.ts)
-- [apps/management-api/src/projects/projects.controller.ts](apps/management-api/src/projects/projects.controller.ts)
-- [apps/management-api/src/monitors/monitors.controller.ts](apps/management-api/src/monitors/monitors.controller.ts)
-- [apps/management-api/src/metrics/metrics.controller.ts](apps/management-api/src/metrics/metrics.controller.ts)
-- [apps/management-api/src/incidents/incidents.controller.ts](apps/management-api/src/incidents/incidents.controller.ts)
-- [apps/management-api/src/notifications/notifications.controller.ts](apps/management-api/src/notifications/notifications.controller.ts)
-- [apps/management-api/src/alert-policy/alert-policy.controller.ts](apps/management-api/src/alert-policy/alert-policy.controller.ts)
+- `PATCH /users/:id` is currently a placeholder implementation and returns a string response instead of updating the record.
 
-DTOs:
-- [apps/management-api/src/auth/dto](apps/management-api/src/auth/dto)
-- [apps/management-api/src/teams/dto](apps/management-api/src/teams/dto)
-- [apps/management-api/src/projects/dto](apps/management-api/src/projects/dto)
-- [apps/management-api/src/monitors/dto](apps/management-api/src/monitors/dto)
-- [apps/management-api/src/metrics/dto](apps/management-api/src/metrics/dto)
-- [apps/management-api/src/incidents/dto](apps/management-api/src/incidents/dto)
-- [apps/management-api/src/notifications/dto](apps/management-api/src/notifications/dto)
-- [apps/management-api/src/alert-policy/dto](apps/management-api/src/alert-policy/dto)
+## Endpoint Reference
 
-Entities:
-- [libs/database/src/entity](libs/database/src/entity)
+## Users
 
-E2E behavior references:
-- [apps/management-api/test/users.e2e-spec.ts](apps/management-api/test/users.e2e-spec.ts)
-- [apps/management-api/test/teams.e2e-spec.ts](apps/management-api/test/teams.e2e-spec.ts)
-- [apps/management-api/test/projects.e2e-spec.ts](apps/management-api/test/projects.e2e-spec.ts)
-- [apps/management-api/test/monitors.e2e-spec.ts](apps/management-api/test/monitors.e2e-spec.ts)
-- [apps/management-api/test/metrics.e2e-spec.ts](apps/management-api/test/metrics.e2e-spec.ts)
-- [apps/management-api/test/incidents.e2e-spec.ts](apps/management-api/test/incidents.e2e-spec.ts)
+### `POST /signup`
+
+- Auth: none
+- Body: `SignUpDto`
+- Response: `User` (partial, without password)
+- Status codes:
+  - `201 Created`
+- What it does:
+  - registers a new user account
+
+### `POST /signin`
+
+- Auth: `LocalAuthGuard`
+- Body: `SignInDto`
+- Response: `SignInDtoResponse`
+- Status codes:
+  - `201 Created`
+  - `401 Unauthorized`
+- What it does:
+  - authenticates the user and returns a JWT access token
+
+### `GET /`
+
+- Auth: none
+- Query params:
+  - `take` integer, max 100
+  - `skip` integer
+- Response: currently inconsistent; service implementation currently returns `undefined`
+- Status codes:
+  - `200 OK`
+  - `403 Forbidden` when `take > 100`
+- What it does:
+  - intended to list users, but the current implementation is incomplete
+
+### `GET /users/search`
+
+- Auth: none
+- Query params:
+  - `name` optional
+  - `email` optional
+- Response: `User[]`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - searches users by partial name or partial email
+
+### `GET /me`
+
+- Auth: JWT required
+- Response: `User`
+- Status codes:
+  - `200 OK`
+  - `401 Unauthorized`
+- What it does:
+  - returns the currently authenticated user
+
+### `GET /users/:id`
+
+- Auth: none
+- Response: `User | null`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - fetches a user by id
+
+### `PATCH /users/:id`
+
+- Auth: none
+- Body: `UpdateUserDto`
+- Response: string placeholder
+- Status codes:
+  - `200 OK`
+- What it does:
+  - currently not implemented; returns placeholder text
+
+### `DELETE /users/:id`
+
+- Auth: none
+- Response: boolean
+- Status codes:
+  - `200 OK`
+- What it does:
+  - deletes a user and returns `true` or `false`
+
+## Teams
+
+### `POST /teams`
+
+- Auth: JWT required
+- Body: `CreateTeamDto`
+- Response: `Team`
+- Status codes:
+  - `201 Created`
+  - `401 Unauthorized`
+  - `400 Bad Request`
+- What it does:
+  - creates a new team
+  - automatically sets the authenticated user as `createdBy`
+  - automatically adds the authenticated user as a member
+
+### `GET /teams`
+
+- Auth: JWT required
+- Response: `TeamListResponse`
+- Status codes:
+  - `200 OK`
+  - `401 Unauthorized`
+- What it does:
+  - returns all teams the current user belongs to
+
+### `GET /teams/:id`
+
+- Auth: JWT required
+- Response: `Team | null`
+- Status codes:
+  - `200 OK`
+  - `401 Unauthorized`
+  - `400 Bad Request`
+- What it does:
+  - returns a team by id
+
+### `PUT /teams/:id/addUser`
+
+- Auth: JWT required
+- Body: `UpdateTeamDto`
+- Response: `Team`
+- Status codes:
+  - `200 OK`
+  - `400 Bad Request`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+  - `404 Not Found`
+- What it does:
+  - renames the team when `name` is sent
+  - adds a user when `addUserId` is sent
+  - removes a user when `removeUserId` is sent
+- Important behavior:
+  - only `createdBy` can call this successfully
+  - only one of `addUserId` or `removeUserId` should be sent
+  - creator cannot remove themselves
+  - adding the same member twice is effectively ignored
+
+### `DELETE /teams/:id`
+
+- Auth: JWT required
+- Response: boolean
+- Status codes:
+  - `200 OK`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+  - `400 Bad Request`
+- What it does:
+  - deletes the team
+- Important behavior:
+  - only `createdBy` can delete the team
+
+## Projects
+
+All project routes are guarded by both JWT auth and team membership.
+
+### `POST /teams/:teamId/projects`
+
+- Auth: JWT + team membership required
+- Body: `CreateProjectDto`
+- Response: `Project`
+- Status codes:
+  - `201 Created`
+  - `400 Bad Request`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+  - `404 Not Found`
+- What it does:
+  - creates a project inside a team
+- Important behavior:
+  - user must be a member of the team to pass the guard
+  - user must also be the team creator to actually create the project
+
+### `GET /teams/:teamId/projects`
+
+- Auth: JWT + team membership required
+- Response: `Project[]`
+- Status codes:
+  - `200 OK`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+- What it does:
+  - lists projects belonging to the team
+
+### `GET /teams/:teamId/projects/:id`
+
+- Auth: JWT + team membership required
+- Response: `Project`
+- Status codes:
+  - `200 OK`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+  - `404 Not Found`
+- What it does:
+  - returns a single project by id
+
+### `PATCH /teams/:teamId/projects/:id`
+
+- Auth: JWT + team membership required
+- Body: `UpdateProjectDto`
+- Response: string placeholder
+- Status codes:
+  - `200 OK`
+- What it does:
+  - currently not implemented; returns placeholder text
+
+### `DELETE /teams/:teamId/projects/:id`
+
+- Auth: JWT + team membership required
+- Response: boolean
+- Status codes:
+  - `200 OK`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+- What it does:
+  - deletes a project
+- Important behavior:
+  - only the team creator can remove the project
+
+## Monitors
+
+All monitor routes are guarded by both JWT auth and team membership.
+
+### `POST /teams/:teamId/projects/:projectId/monitors`
+
+- Auth: JWT + team membership required
+- Body: `CreateMonitorDto`
+- Response: `Monitor`
+- Status codes:
+  - `201 Created`
+  - `400 Bad Request`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+- What it does:
+  - creates a monitor under a project
+
+### `GET /teams/:teamId/projects/:projectId/monitors`
+
+- Auth: JWT + team membership required
+- Response: `Monitor[]`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - lists monitors for a project
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:id`
+
+- Auth: JWT + team membership required
+- Response: `Monitor | null`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - fetches a monitor by id
+
+### `PATCH /teams/:teamId/projects/:projectId/monitors/:id`
+
+- Auth: JWT + team membership required
+- Body: `UpdateMonitorDto`
+- Response: `Monitor | null`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - updates a monitor by id
+
+### `DELETE /teams/:teamId/projects/:projectId/monitors/:id`
+
+- Auth: JWT + team membership required
+- Response: boolean
+- Status codes:
+  - `200 OK`
+- What it does:
+  - deletes a monitor by id
+
+## Metrics
+
+All metric routes are guarded by both JWT auth and team membership.
+
+### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics`
+
+- Auth: JWT + team membership required
+- Body: `CreateMetricDto`
+- Response: `Metric`
+- Status codes:
+  - `201 Created`
+  - `400 Bad Request`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+- What it does:
+  - stores a new metric sample for a monitor
+  - publishes a long-poll update for listeners
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics`
+
+- Auth: JWT + team membership required
+- Query:
+  - `beginDate`
+  - `endDate`
+  - `region`
+- Response: `Metric[]`
+- Status codes:
+  - `200 OK`
+  - `406 Not Acceptable`
+- What it does:
+  - lists metrics within a date range for the monitor
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/poll`
+
+- Auth: JWT + team membership required
+- Response: `Metric`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+- What it does:
+  - waits for the next metric update for the monitor
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id`
+
+- Auth: currently no `TeamMemberGuard` at method level in controller, but route is nested under JWT controller
+- Response: `Metric | null`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - gets a metric by id
+
+### `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id`
+
+- Auth: currently no `TeamMemberGuard` at method level in controller, but route is nested under JWT controller
+- Body: `UpdateMetricDto`
+- Response: `Metric | null`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - updates a metric by id
+
+### `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id`
+
+- Auth: currently no `TeamMemberGuard` at method level in controller, but route is nested under JWT controller
+- Response: boolean
+- Status codes:
+  - `200 OK`
+- What it does:
+  - deletes a metric by id
+
+## Alerts
+
+All alert routes are guarded by both JWT auth and team membership.
+
+### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts`
+
+- Auth: JWT + team membership required
+- Body: `CreateAlertDto`
+- Response: `Alert`
+- Status codes:
+  - `201 Created`
+  - `400 Bad Request`
+  - `401 Unauthorized`
+  - `403 Forbidden`
+  - `406 Not Acceptable`
+- What it does:
+  - creates a manual alert record
+  - publishes the created alert to long-poll subscribers
+- Important behavior:
+  - `body.monitorId` must match route `:monitorId`
+  - monitor must belong to the given project
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts`
+
+- Response: `Alert[]`
+- Status codes:
+  - `200 OK`
+  - `406 Not Acceptable`
+- What it does:
+  - lists alerts for the monitor
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/poll`
+
+- Response: `Alert`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+- What it does:
+  - waits for the next alert update for the monitor
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id`
+
+- Response: `Alert`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+- What it does:
+  - returns a single alert by id
+
+### `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id`
+
+- Body: `UpdateAlertDto`
+- Response: `Alert`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+- What it does:
+  - updates an alert by id and publishes the new version to subscribers
+
+### `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id`
+
+- Response: `{ "deleted": true }`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+- What it does:
+  - deletes an alert by id and publishes a deletion event to subscribers
+
+## Analytics
+
+All analytics routes are guarded by both JWT auth and team membership.
+
+### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics`
+
+- Body: `CreateAnalyticsDto`
+- Response: `Analytics`
+- Status codes:
+  - `201 Created`
+  - `400 Bad Request`
+  - `406 Not Acceptable`
+- What it does:
+  - creates analytics for a monitor and publishes the result to subscribers
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics`
+
+- Response: `Analytics[]`
+- Status codes:
+  - `200 OK`
+  - `406 Not Acceptable`
+- What it does:
+  - lists analytics rows for the monitor
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/availability`
+
+- Query params (optional, must be sent together):
+  - `startTime`: ISO datetime string
+  - `endTime`: ISO datetime string
+- Response: `MonitorAvailability`
+- Status codes:
+  - `200 OK`
+  - `400 Bad Request`
+  - `406 Not Acceptable`
+- What it does:
+  - returns monitor availability and downtime
+  - if both `startTime` and `endTime` are provided, calculates within that time range
+  - if no query params are provided, calculates over the monitor's observed timeline
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/poll`
+
+- Response: `Analytics`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+- What it does:
+  - waits for the next analytics update for the monitor
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id`
+
+- Response: `Analytics`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+
+### `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id`
+
+- Body: `UpdateAnalyticsDto`
+- Response: `Analytics`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+
+### `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id`
+
+- Response: `{ "deleted": true }`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+  - `406 Not Acceptable`
+
+## Incidents
+
+All incident routes are guarded by both JWT auth and team membership.
+
+### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents`
+
+- Body: `CreateIncidentDto`
+- Response: `Incident`
+- Status codes:
+  - `201 Created`
+  - `400 Bad Request`
+- What it does:
+  - creates an incident record for the monitor
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents`
+
+- Response: `Incident[]`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - lists incidents for a monitor
+
+### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id`
+
+- Response: `Incident | null`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - returns a single incident by id
+
+### `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id`
+
+- Body: `UpdateIncidentDto`
+- Response: string placeholder
+- Status codes:
+  - `200 OK`
+- What it does:
+  - currently not implemented; returns placeholder text
+
+### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/acknowledge`
+
+- Body:
+
+```json
+{
+  "userId": "uuid, optional"
+}
+```
+
+- Response: TypeORM update result
+- Status codes:
+  - `200 OK`
+- What it does:
+  - marks the incident as `ACKNOWLEDGED`
+  - uses `body.userId` if provided, otherwise falls back to the authenticated user id
+
+### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/resolve`
+
+- Body: none
+- Response: TypeORM update result
+- Status codes:
+  - `200 OK`
+- What it does:
+  - marks the incident as `RESOLVED`
+
+### `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id`
+
+- Response: boolean
+- Status codes:
+  - `200 OK`
+- What it does:
+  - deletes the incident by id
+
+## Notifications
+
+All notification routes are guarded by both JWT auth and team membership.
+
+### `POST /teams/:teamId/projects/:projectId/notifications`
+
+- Body: `CreateNotificationDto`
+- Response: `Notification`
+- Status codes:
+  - `201 Created`
+  - `400 Bad Request`
+- What it does:
+  - creates a notification record
+  - defaults `status` to `PENDING` if omitted
+  - publishes a long-poll event when `incidentId` exists
+
+### `GET /teams/:teamId/projects/:projectId/notifications/by-team/:teamIdParam`
+
+- Response: `Notification[]`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - lists notifications by team id
+
+### `GET /teams/:teamId/projects/:projectId/notifications/poll`
+
+- Query:
+  - `timeout` optional, milliseconds
+- Response: `Notification | null`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - waits for the next notification event for the project channel
+  - returns `null` on timeout instead of returning `404`
+
+### `GET /teams/:teamId/projects/:projectId/notifications`
+
+- Response: `Notification[]`
+- Status codes:
+  - `200 OK`
+- What it does:
+  - lists notifications for the project
+
+### `GET /teams/:teamId/projects/:projectId/notifications/:id`
+
+- Response: `Notification`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+
+### `PATCH /teams/:teamId/projects/:projectId/notifications/:id`
+
+- Body: `UpdateNotificationDto`
+- Response: `Notification`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+
+### `DELETE /teams/:teamId/projects/:projectId/notifications/:id`
+
+- Response: `Notification`
+- Status codes:
+  - `200 OK`
+  - `404 Not Found`
+
+## Alert Policy
+
+All alert policy routes are guarded by both JWT auth and team membership.
+
+### `POST /teams/:teamId/projects/:projectId/alert-policy`
+
+- Body: `CreateAlertPolicyDto`
+- Response: `AlertPolicy`
+- Status codes:
+  - `201 Created`
+  - `400 Bad Request`
+
+### `GET /teams/:teamId/projects/:projectId/alert-policy`
+
+- Response: `AlertPolicy[]`
+- Status codes:
+  - `200 OK`
+
+### `GET /teams/:teamId/projects/:projectId/alert-policy/:id`
+
+- Response: `AlertPolicy`
+- Status codes:
+  - `200 OK`
+
+### `PATCH /teams/:teamId/projects/:projectId/alert-policy/:id`
+
+- Body: `UpdateAlertPolicyDto`
+- Response: `AlertPolicy`
+- Status codes:
+  - `200 OK`
+
+### `DELETE /teams/:teamId/projects/:projectId/alert-policy/:id`
+
+- Response: repository delete result / boolean-like deletion behavior depending on implementation
+- Status codes:
+  - `200 OK`
+
+## Client Walkthroughs
+
+## Walkthrough 1: Sign up, sign in, and create a team
+
+### Step 1: Register
+
+`POST /signup`
+
+```json
+{
+  "name": "Shatwik",
+  "email": "shatwik@example.com",
+  "password": "secret123"
+}
+```
+
+Expected result:
+
+- `201 Created`
+- user object returned
+
+### Step 2: Log in
+
+`POST /signin`
+
+```json
+{
+  "email": "shatwik@example.com",
+  "password": "secret123"
+}
+```
+
+Expected result:
+
+```json
+{
+  "access_token": "<jwt>"
+}
+```
+
+### Step 3: Create a team
+
+`POST /teams`
+
+```json
+{
+  "name": "Platform Team"
+}
+```
+
+Expected result:
+
+- current user becomes `createdBy`
+- current user is added to `members`
+
+## Walkthrough 2: Add a member and create a project
+
+This only works for the team creator.
+
+### Step 1: Add a member
+
+`PUT /teams/:teamId/addUser`
+
+```json
+{
+  "addUserId": "<other-user-id>"
+}
+```
+
+Expected result:
+
+- updated `Team` returned
+- `members` includes the new user
+
+### Step 2: Create a project
+
+`POST /teams/:teamId/projects`
+
+```json
+{
+  "name": "Checkout API",
+  "description": "Checkout service monitoring project"
+}
+```
+
+Expected result:
+
+- `201 Created`
+- project returned
+
+If a regular team member calls the same endpoint:
+
+- request passes team membership guard
+- service returns `403 Forbidden`
+
+## Walkthrough 3: Create a monitor, ingest metrics, and listen for alerts/analytics
+
+### Step 1: Create a monitor
+
+`POST /teams/:teamId/projects/:projectId/monitors`
+
+```json
+{
+  "name": "Homepage Health",
+  "target": "https://example.com/health",
+  "method": "GET",
+  "frequencySeconds": 60,
+  "projectId": "<project-id>"
+}
+```
+
+### Step 2: Start long-poll listeners
+
+Client A can call:
+
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/poll`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/poll`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/poll`
+
+Behavior:
+
+- request stays open until an event arrives or timeout occurs
+- metrics/alerts/analytics poll timeouts return `404`
+
+### Step 3: Post a metric
+
+`POST /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics`
+
+```json
+{
+  "durationMs": 120,
+  "statusCode": 200,
+  "dns_response_time_ms": 5,
+  "tcp_connection_time_ms": 10,
+  "tls_handshake_time_ms": 15,
+  "time_to_first_byte_ms": 30,
+  "server_processing_time_ms": 35,
+  "content_transfer_time_ms": 25,
+  "total_time_ms": 120,
+  "region": "IN",
+  "isSuccess": true,
+  "monitorId": "<monitor-id>"
+}
+```
+
+Expected result:
+
+- metric is stored
+- metric poll subscribers receive the new metric
+
+### Step 4: Create or update alerts/analytics manually if needed
+
+Manual alert creation:
+
+`POST /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts`
+
+Manual analytics creation:
+
+`POST /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics`
+
+Both endpoints publish events to their `/poll` listeners.
+
+## Known Client-Facing Gaps
+
+These endpoints are currently scaffold or partially implemented and clients should treat them carefully:
+
+- `GET /` user list: current service does not return the queried users properly
+- `PATCH /users/:id`: placeholder string response
+- `PATCH /teams/:teamId/projects/:id`: placeholder string response
+- `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id`: placeholder string response
+- Notifications `/poll` ignores the provided timeout value in the service and uses the shared long-poll default
+
+## Recommendation For Client Integrations
+
+- Use the swagger UI for quick payload inspection, but rely on this document for current behavioral details
+- Expect strict DTO validation failures as `400`
+- Treat owner-only operations separately in the frontend UI
+- Build client polling for alerts, analytics, and metrics as timeout-and-retry loops
+- For notifications polling, expect `200` with `null` on timeout instead of `404`

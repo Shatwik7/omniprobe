@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Team } from '@app/database';
+import { Team, User } from '@app/database';
 import { TeamsController } from './teams.controller';
 import { TeamsService } from './teams.service';
 
@@ -12,6 +12,7 @@ describe('Teams Integration (controller + service + repository)', () => {
     Repository<Team>,
     'create' | 'save' | 'findAndCount' | 'findOne' | 'update' | 'delete'
   >;
+  let usersRepository: Pick<Repository<User>, 'findOne'>;
 
   const repositoryMock = {
     create: jest.fn(),
@@ -20,6 +21,10 @@ describe('Teams Integration (controller + service + repository)', () => {
     findOne: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+  };
+
+  const usersRepositoryMock = {
+    findOne: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -31,11 +36,16 @@ describe('Teams Integration (controller + service + repository)', () => {
           provide: getRepositoryToken(Team),
           useValue: repositoryMock,
         },
+        {
+          provide: getRepositoryToken(User),
+          useValue: usersRepositoryMock,
+        },
       ],
     }).compile();
 
     controller = module.get(TeamsController);
     repository = module.get(getRepositoryToken(Team));
+    usersRepository = module.get(getRepositoryToken(User));
 
     repositoryMock.create.mockReset();
     repositoryMock.save.mockReset();
@@ -43,6 +53,7 @@ describe('Teams Integration (controller + service + repository)', () => {
     repositoryMock.findOne.mockReset();
     repositoryMock.update.mockReset();
     repositoryMock.delete.mockReset();
+    usersRepositoryMock.findOne.mockReset();
   });
 
   it('create should flow from controller to repository.save', async () => {
@@ -95,35 +106,61 @@ describe('Teams Integration (controller + service + repository)', () => {
   });
 
   it('update and remove should flow to repository update/delete', async () => {
-    repositoryMock.update.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
     repositoryMock.findOne.mockReturnValueOnce(
       Promise.resolve({
         id: 'team-1',
+        name: 'Core Team',
         members: [{ id: 'user-1' }],
+        createdBy: { id: 'user-1' },
       } as unknown as Team),
     );
     repositoryMock.save.mockReturnValueOnce(
-      Promise.resolve({ id: 'team-1', members: [] } as unknown as Team),
+      Promise.resolve({
+        id: 'team-1',
+        name: 'Updated Team',
+        members: [{ id: 'user-1' }],
+        createdBy: { id: 'user-1' },
+      } as unknown as Team),
+    );
+    repositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({
+        id: 'team-1',
+        name: 'Updated Team',
+        members: [{ id: 'user-1' }],
+        createdBy: { id: 'user-1' },
+      } as unknown as Team),
+    );
+    repositoryMock.save.mockReturnValueOnce(
+      Promise.resolve({
+        id: 'team-1',
+        name: 'Updated Team',
+        members: [],
+        createdBy: { id: 'user-1' },
+      } as unknown as Team),
     );
     repositoryMock.delete.mockReturnValueOnce(Promise.resolve({ affected: 1 }));
 
     const updateResponse = await controller.update('team-1', {
       name: 'Updated Team',
-    });
-    const deleteResponse = await controller.remove('team-1');
+    }, { user: { id: 'user-1' } });
+    const deleteResponse = await controller.remove('team-1', { user: { id: 'user-1' } });
 
-    expect(repository.update).toHaveBeenCalledWith('team-1', {
-      name: 'Updated Team',
-    });
-    expect(repository.findOne).toHaveBeenCalledWith({
+    expect(repository.save).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ name: 'Updated Team', members: [{ id: 'user-1' }] }),
+    );
+    expect(repository.findOne).toHaveBeenLastCalledWith({
       where: { id: 'team-1' },
-      relations: ['members'],
+      relations: ['members', 'createdBy'],
     });
-    expect(repository.save).toHaveBeenCalledWith(
+    expect(repository.save).toHaveBeenNthCalledWith(
+      2,
       expect.objectContaining({ members: [] }),
     );
     expect(repository.delete).toHaveBeenCalledWith({ id: 'team-1' });
-    expect(updateResponse).toEqual({ affected: 1 });
+    expect(updateResponse).toEqual(
+      expect.objectContaining({ name: 'Updated Team' }),
+    );
     expect(deleteResponse).toBe(true);
   });
 });

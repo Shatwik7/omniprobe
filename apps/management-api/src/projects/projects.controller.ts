@@ -36,7 +36,7 @@ export class ProjectsController {
     @Body() createProjectDto: CreateProjectDto,
     @Request() req: { user: { id: string } },
   ): Promise<Project> {
-    return this.projectsService.create(createProjectDto, teamId);
+    return this.projectsService.create(createProjectDto, teamId, req.user.id);
   }
 
   @Get()

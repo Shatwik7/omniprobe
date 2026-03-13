@@ -12,6 +12,7 @@ describe('Projects Integration (controller + service + repositories)', () => {
     Repository<Project>,
     'create' | 'save' | 'find' | 'findOne' | 'delete'
   >;
+  let teamsRepository: Pick<Repository<Team>, 'findOne'>;
 
   const projectsRepositoryMock = {
     create: jest.fn(),
@@ -19,6 +20,10 @@ describe('Projects Integration (controller + service + repositories)', () => {
     find: jest.fn(),
     findOne: jest.fn(),
     delete: jest.fn(),
+  };
+
+  const teamsRepositoryMock = {
+    findOne: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -32,24 +37,29 @@ describe('Projects Integration (controller + service + repositories)', () => {
         },
         {
           provide: getRepositoryToken(Team),
-          useValue: {},
+          useValue: teamsRepositoryMock,
         },
       ],
     }).compile();
 
     controller = module.get(ProjectsController);
     projectsRepository = module.get(getRepositoryToken(Project));
+    teamsRepository = module.get(getRepositoryToken(Team));
 
     projectsRepositoryMock.create.mockReset();
     projectsRepositoryMock.save.mockReset();
     projectsRepositoryMock.find.mockReset();
     projectsRepositoryMock.findOne.mockReset();
     projectsRepositoryMock.delete.mockReset();
+    teamsRepositoryMock.findOne.mockReset();
   });
 
   it('create should flow through to repository.create/save', async () => {
     const created = { name: 'P1' } as Project;
     const saved = { id: 'project-1', name: 'P1' } as Project;
+    teamsRepositoryMock.findOne.mockReturnValueOnce(
+      Promise.resolve({ id: 'team-1', createdBy: { id: 'user-1' } }),
+    );
     projectsRepositoryMock.create.mockReturnValueOnce(created);
     projectsRepositoryMock.save.mockReturnValueOnce(Promise.resolve(saved));
 
@@ -63,6 +73,10 @@ describe('Projects Integration (controller + service + repositories)', () => {
       name: 'P1',
       team: { id: 'team-1' },
       description: 'Desc',
+    });
+    expect(teamsRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'team-1' },
+      relations: ['createdBy'],
     });
     expect(projectsRepository.save).toHaveBeenCalledWith(created);
     expect(response).toEqual(saved);

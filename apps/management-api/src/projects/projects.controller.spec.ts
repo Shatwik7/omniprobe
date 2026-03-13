@@ -67,6 +67,7 @@ describe('ProjectsController', () => {
     expect(projectsService.create).toHaveBeenCalledWith(
       { name: 'P1', description: 'Desc' },
       'team-1',
+      'user-1',
     );
     expect(response).toEqual(created);
   });

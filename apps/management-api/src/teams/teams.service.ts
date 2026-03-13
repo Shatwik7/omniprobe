@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,6 +15,9 @@ export class TeamsService {
   constructor(
     @InjectRepository(Team)
     private readonly teamsRepo: Repository<Team>,
+
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
   ) {}
 
   private getTeamById(id: string): Promise<Team | null> {
@@ -69,18 +77,77 @@ export class TeamsService {
     return team;
   }
 
-  update(id: string, updateTeamDto: UpdateTeamDto) {
-    return this.teamsRepo.update(id, updateTeamDto);
-  }
-
-  async remove(id: string): Promise<boolean> {
+  async update(id: string, updateTeamDto: UpdateTeamDto, requesterId: string) {
     const team = await this.teamsRepo.findOne({
       where: { id },
-      relations: ['members'],
+      relations: ['members', 'createdBy'],
+    });
+
+    if (!team) {
+      throw new NotFoundException('Team not found');
+    }
+
+    if (team.createdBy?.id !== requesterId) {
+      throw new ForbiddenException(
+        'Only the team creator can manage team members or update the team',
+      );
+    }
+
+    if (updateTeamDto.name) {
+      team.name = updateTeamDto.name;
+    }
+
+    if (updateTeamDto.addUserId && updateTeamDto.removeUserId) {
+      throw new BadRequestException(
+        'Provide only one of addUserId or removeUserId per request',
+      );
+    }
+
+    if (updateTeamDto.addUserId) {
+      const userToAdd = await this.usersRepo.findOne({
+        where: { id: updateTeamDto.addUserId },
+      });
+
+      if (!userToAdd) {
+        throw new NotFoundException('User to add not found');
+      }
+
+      const isExistingMember = team.members?.some(
+        (member) => member.id === updateTeamDto.addUserId,
+      );
+
+      if (!isExistingMember) {
+        team.members = [...(team.members ?? []), userToAdd];
+      }
+    }
+
+    if (updateTeamDto.removeUserId) {
+      if (updateTeamDto.removeUserId === requesterId) {
+        throw new BadRequestException(
+          'Team creator cannot remove themselves from the team',
+        );
+      }
+
+      team.members = (team.members ?? []).filter(
+        (member) => member.id !== updateTeamDto.removeUserId,
+      );
+    }
+
+    return this.teamsRepo.save(team);
+  }
+
+  async remove(id: string, requesterId: string): Promise<boolean> {
+    const team = await this.teamsRepo.findOne({
+      where: { id },
+      relations: ['members', 'createdBy'],
     });
 
     if (!team) {
       return false;
+    }
+
+    if (team.createdBy?.id !== requesterId) {
+      throw new ForbiddenException('Only the team creator can delete the team');
     }
 
     team.members = [];
