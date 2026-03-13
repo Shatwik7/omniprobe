@@ -3,6 +3,7 @@ import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { LongPollingService } from '@app/common';
 import {
+  BadRequestException,
   NotAcceptableException,
   NotFoundException,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ describe('AnalyticsController', () => {
     checkMonitorInProject: jest.Mock;
     create: jest.Mock;
     findAllByMonitor: jest.Mock;
+    getMonitorAvailability: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
     remove: jest.Mock;
@@ -29,6 +31,7 @@ describe('AnalyticsController', () => {
     checkMonitorInProject: jest.fn(),
     create: jest.fn(),
     findAllByMonitor: jest.fn(),
+    getMonitorAvailability: jest.fn(),
     findOne: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
@@ -64,6 +67,7 @@ describe('AnalyticsController', () => {
     analyticsServiceMock.checkMonitorInProject.mockReset();
     analyticsServiceMock.create.mockReset();
     analyticsServiceMock.findAllByMonitor.mockReset();
+    analyticsServiceMock.getMonitorAvailability.mockReset();
     analyticsServiceMock.findOne.mockReset();
     analyticsServiceMock.update.mockReset();
     analyticsServiceMock.remove.mockReset();
@@ -228,6 +232,92 @@ describe('AnalyticsController', () => {
       await expect(
         controller.findOne(ANALYTICS_ID, MONITOR_ID, PROJECT_ID),
       ).rejects.toThrow(NotAcceptableException);
+    });
+  });
+
+  describe('getMonitorAvailability', () => {
+    it('should return availability and downtime without time range', async () => {
+      analyticsService.checkMonitorInProject.mockReturnValueOnce(
+        Promise.resolve(false),
+      );
+      analyticsService.getMonitorAvailability.mockReturnValueOnce(
+        Promise.resolve({ availability: 99.5, downtime: 3000 }),
+      );
+
+      const result = await controller.getMonitorAvailability(
+        MONITOR_ID,
+        PROJECT_ID,
+      );
+
+      expect(analyticsService.getMonitorAvailability).toHaveBeenCalledWith(
+        MONITOR_ID,
+        undefined,
+        undefined,
+      );
+      expect(result).toEqual({ availability: 99.5, downtime: 3000 });
+    });
+
+    it('should return availability and downtime with time range', async () => {
+      analyticsService.checkMonitorInProject.mockReturnValueOnce(
+        Promise.resolve(false),
+      );
+      analyticsService.getMonitorAvailability.mockReturnValueOnce(
+        Promise.resolve({ availability: 98.2, downtime: 120000 }),
+      );
+
+      const result = await controller.getMonitorAvailability(
+        MONITOR_ID,
+        PROJECT_ID,
+        '2026-01-01T00:00:00.000Z',
+        '2026-01-02T00:00:00.000Z',
+      );
+
+      expect(analyticsService.getMonitorAvailability).toHaveBeenCalledWith(
+        MONITOR_ID,
+        '2026-01-01T00:00:00.000Z',
+        '2026-01-02T00:00:00.000Z',
+      );
+      expect(result).toEqual({ availability: 98.2, downtime: 120000 });
+    });
+
+    it('should throw NotAcceptableException if monitor not in project', async () => {
+      analyticsService.checkMonitorInProject.mockReturnValueOnce(
+        Promise.resolve(true),
+      );
+
+      await expect(
+        controller.getMonitorAvailability(MONITOR_ID, PROJECT_ID),
+      ).rejects.toThrow(NotAcceptableException);
+    });
+
+    it('should throw BadRequestException when only one date is provided', async () => {
+      analyticsService.checkMonitorInProject.mockReturnValueOnce(
+        Promise.resolve(false),
+      );
+
+      await expect(
+        controller.getMonitorAvailability(
+          MONITOR_ID,
+          PROJECT_ID,
+          '2026-01-01T00:00:00.000Z',
+          undefined,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when date format is invalid', async () => {
+      analyticsService.checkMonitorInProject.mockReturnValueOnce(
+        Promise.resolve(false),
+      );
+
+      await expect(
+        controller.getMonitorAvailability(
+          MONITOR_ID,
+          PROJECT_ID,
+          'invalid-date',
+          '2026-01-01T01:00:00.000Z',
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

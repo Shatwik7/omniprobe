@@ -1,7 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AnalyticsService } from './analytics.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Analytics, Monitor, Project } from '@app/database';
+import {
+  Analytics,
+  Incident,
+  IncidentStatus,
+  Metric,
+  Monitor,
+  Project,
+} from '@app/database';
 import { Repository } from 'typeorm';
 import { describe, beforeEach, it, expect, jest } from '@jest/globals';
 
@@ -12,6 +19,8 @@ describe('AnalyticsService', () => {
     'create' | 'save' | 'find' | 'findOne' | 'delete'
   >;
   let monitorRepository: Pick<Repository<Monitor>, 'findOne'>;
+  let incidentRepository: Pick<Repository<Incident>, 'find'>;
+  let metricRepository: Pick<Repository<Metric>, 'findOne'>;
 
   const analyticsRepositoryMock = {
     create: jest.fn(),
@@ -22,6 +31,14 @@ describe('AnalyticsService', () => {
   };
 
   const monitorRepositoryMock = {
+    findOne: jest.fn(),
+  };
+
+  const incidentRepositoryMock = {
+    find: jest.fn(),
+  };
+
+  const metricRepositoryMock = {
     findOne: jest.fn(),
   };
 
@@ -41,12 +58,22 @@ describe('AnalyticsService', () => {
           provide: getRepositoryToken(Project),
           useValue: {},
         },
+        {
+          provide: getRepositoryToken(Incident),
+          useValue: incidentRepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(Metric),
+          useValue: metricRepositoryMock,
+        },
       ],
     }).compile();
 
     service = module.get<AnalyticsService>(AnalyticsService);
     analyticsRepository = module.get(getRepositoryToken(Analytics));
     monitorRepository = module.get(getRepositoryToken(Monitor));
+    incidentRepository = module.get(getRepositoryToken(Incident));
+    metricRepository = module.get(getRepositoryToken(Metric));
 
     analyticsRepositoryMock.create.mockReset();
     analyticsRepositoryMock.save.mockReset();
@@ -54,6 +81,8 @@ describe('AnalyticsService', () => {
     analyticsRepositoryMock.findOne.mockReset();
     analyticsRepositoryMock.delete.mockReset();
     monitorRepositoryMock.findOne.mockReset();
+    incidentRepositoryMock.find.mockReset();
+    metricRepositoryMock.findOne.mockReset();
   });
 
   it('should be defined', () => {
@@ -104,7 +133,7 @@ describe('AnalyticsService', () => {
       analyticsRepositoryMock.create.mockReturnValueOnce(created);
       analyticsRepositoryMock.save.mockReturnValueOnce(Promise.resolve(saved));
 
-      const result = await service.create(dto);
+      const result = await service.create(dto as any);
 
       expect(analyticsRepository.create).toHaveBeenCalledWith({
         region: 'EU',
@@ -133,6 +162,72 @@ describe('AnalyticsService', () => {
         order: { createdAt: 'DESC' },
       });
       expect(result).toEqual(list);
+    });
+  });
+
+  describe('getMonitorAvailability', () => {
+    it('should use full-range calculation when no time window is provided', async () => {
+      const calcSpy = jest
+        .spyOn(service, 'calculateAvailabilityAndDowntime')
+        .mockResolvedValueOnce({ availability: 99.1, downtime: 4000 });
+
+      const result = await service.getMonitorAvailability('monitor-1');
+
+      expect(calcSpy).toHaveBeenCalledWith('monitor-1');
+      expect(result).toEqual({ availability: 99.1, downtime: 4000 });
+    });
+
+    it('should use time-range calculation when both start and end are provided', async () => {
+      const rangeSpy = jest
+        .spyOn(service, 'calculateAvailabilityAndDowntimeOfTimePeriod')
+        .mockResolvedValueOnce({ availability: 97.5, downtime: 60000 });
+
+      const result = await service.getMonitorAvailability(
+        'monitor-1',
+        '2026-01-01T00:00:00.000Z',
+        '2026-01-01T01:00:00.000Z',
+      );
+
+      expect(rangeSpy).toHaveBeenCalledWith(
+        'monitor-1',
+        '2026-01-01T00:00:00.000Z',
+        '2026-01-01T01:00:00.000Z',
+      );
+      expect(result).toEqual({ availability: 97.5, downtime: 60000 });
+    });
+  });
+
+  describe('calculateAvailabilityAndDowntime', () => {
+    it('should return 100 availability when metrics are missing', async () => {
+      incidentRepositoryMock.find.mockReturnValueOnce(Promise.resolve([]));
+      metricRepositoryMock.findOne
+        .mockReturnValueOnce(Promise.resolve(null))
+        .mockReturnValueOnce(Promise.resolve(null));
+
+      const result = await service.calculateAvailabilityAndDowntime('monitor-1');
+
+      expect(result).toEqual({ availability: 100, downtime: 0 });
+    });
+
+    it('should calculate availability and downtime from incidents and metric range', async () => {
+      const now = Date.now();
+      const firstMetric = { createdAt: new Date(now - 100000) } as Metric;
+      const lastMetric = { createdAt: new Date(now) } as Metric;
+      const incident = {
+        startedAt: new Date(now - 50000),
+        resolvedAt: new Date(now - 30000),
+        status: IncidentStatus.RESOLVED,
+      } as Incident;
+
+      incidentRepositoryMock.find.mockReturnValueOnce(Promise.resolve([incident]));
+      metricRepositoryMock.findOne
+        .mockReturnValueOnce(Promise.resolve(firstMetric))
+        .mockReturnValueOnce(Promise.resolve(lastMetric));
+
+      const result = await service.calculateAvailabilityAndDowntime('monitor-1');
+
+      expect(result.downtime).toBe(20000);
+      expect(result.availability).toBe(80);
     });
   });
 

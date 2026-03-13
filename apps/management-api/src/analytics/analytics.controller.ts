@@ -10,6 +10,8 @@ import {
   ParseUUIDPipe,
   NotAcceptableException,
   NotFoundException,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { CreateAnalyticsDto } from './dto/create-analytics.dto';
@@ -75,6 +77,48 @@ export class AnalyticsController {
       throw new NotFoundException('Long polling timed out');
     }
     return data;
+  }
+
+  @Get('availability')
+  @UseGuards(TeamMemberGuard)
+  async getMonitorAvailability(
+    @Param('monitorId', ParseUUIDPipe) monitorId: string,
+    @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Query('startTime') startTime?: string,
+    @Query('endTime') endTime?: string,
+  ) {
+    if (await this.analyticsService.checkMonitorInProject(monitorId, projectId)) {
+      throw new NotAcceptableException(
+        'Monitor does not belong to the specified project',
+      );
+    }
+
+    if ((startTime && !endTime) || (!startTime && endTime)) {
+      throw new BadRequestException(
+        'Both startTime and endTime are required when filtering by time range',
+      );
+    }
+
+    if (startTime && endTime) {
+      const parsedStart = new Date(startTime).getTime();
+      const parsedEnd = new Date(endTime).getTime();
+
+      if (Number.isNaN(parsedStart) || Number.isNaN(parsedEnd)) {
+        throw new BadRequestException(
+          'startTime and endTime must be valid ISO date strings',
+        );
+      }
+
+      if (parsedEnd <= parsedStart) {
+        throw new BadRequestException('endTime must be after startTime');
+      }
+    }
+
+    return this.analyticsService.getMonitorAvailability(
+      monitorId,
+      startTime,
+      endTime,
+    );
   }
 
   @Get(':id')
