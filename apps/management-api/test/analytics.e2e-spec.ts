@@ -299,6 +299,41 @@ describe('Analytics (e2e, real app + real db)', () => {
     expect(ids).toContain(created.body.id);
   });
 
+  it('GET .../analytics/availability should return monitor availability and downtime', async () => {
+    const auth = await createAuthenticatedUser();
+    const teamId = await createTeam(auth.token);
+    const projectId = await createProject(auth.token, teamId);
+    const monitorId = await createMonitor(auth.token, teamId, projectId);
+
+    const response = await request(app.getHttpServer())
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/analytics/availability`,
+      )
+      .set('Authorization', `Bearer ${auth.token}`)
+      .expect(200);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        availability: expect.any(Number),
+        downtime: expect.any(Number),
+      }),
+    );
+  });
+
+  it('GET .../analytics/availability should return 400 when only one date is provided', async () => {
+    const auth = await createAuthenticatedUser();
+    const teamId = await createTeam(auth.token);
+    const projectId = await createProject(auth.token, teamId);
+    const monitorId = await createMonitor(auth.token, teamId, projectId);
+
+    await request(app.getHttpServer())
+      .get(
+        `/teams/${teamId}/projects/${projectId}/monitors/${monitorId}/analytics/availability?startTime=2026-01-01T00:00:00.000Z`,
+      )
+      .set('Authorization', `Bearer ${auth.token}`)
+      .expect(400);
+  });
+
   it('GET .../analytics/:id should return analytics by id', async () => {
     const auth = await createAuthenticatedUser();
     const teamId = await createTeam(auth.token);
