@@ -41,7 +41,7 @@ export class NotificationsController {
     return this.notificationsService.findByTeamId(teamId);
   }
 
-  @Get('/wait')
+  @Get('/poll')
   @UseGuards(TeamMemberGuard)
   async waitForNotification(
     @Param('projectId', ParseUUIDPipe) projectId: string,

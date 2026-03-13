@@ -165,10 +165,10 @@ describe('Notifications E2E', () => {
         });
     });
 
-    describe('GET /notifications/:id/wait', () => {
+    describe('GET /notifications/:id/poll', () => {
         it('should wait for notification updates', async () => {
             const res = await request(app.getHttpServer())
-                .get(`/teams/team-id/projects/project-id/notifications/test-id/wait`)
+                .get(`/teams/team-id/projects/project-id/notifications/test-id/poll`)
                 .timeout(3000)
                 .expect((response) => {
                     if (![HttpStatus.OK, HttpStatus.NOT_FOUND, HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN].includes(response.status)) {
@@ -183,7 +183,7 @@ describe('Notifications E2E', () => {
 
         it('should support custom timeout', async () => {
             const res = await request(app.getHttpServer())
-                .get(`/teams/team-id/projects/project-id/notifications/test-id/wait?timeout=1000`)
+                .get(`/teams/team-id/projects/project-id/notifications/test-id/poll?timeout=1000`)
                 .timeout(3000)
                 .expect((response) => {
                     if (![HttpStatus.OK, HttpStatus.NOT_FOUND, HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN].includes(response.status)) {
