@@ -27,11 +27,11 @@ export class LongPollingService implements OnModuleDestroy {
     this.subClient.on('message', (channel, message) => {
       // Channel: updates:monitor:{id}
       const parts = channel.split(':');
-      const monitorId = parts[2];
+      const id = parts.slice(2).join(':');
 
       try {
         const data = JSON.parse(message);
-        this.resolveLocalObservers(monitorId, data);
+        this.resolveLocalObservers(id, data);
       } catch (err: any) {
         this.logger.error(`Error parsing Redis message: ${err.message}`);
       }
@@ -46,22 +46,22 @@ export class LongPollingService implements OnModuleDestroy {
   /**
    * CONSUMER (Waiting Clients)
    */
-  waitForUpdates(monitorId: string): Promise<any> {
+  waitForUpdates(id: string): Promise<any> {
     return new Promise((resolve) => {
-      if (!this.observers.has(monitorId)) {
-        this.observers.set(monitorId, []);
+      if (!this.observers.has(id)) {
+        this.observers.set(id, []);
         this.subClient
-          .subscribe(`updates:monitor:${monitorId}`)
+          .subscribe(`updates:monitor:${id}`)
           .catch((err) =>
             this.logger.error(`Subscribe failed: ${err.message}`),
           );
       }
 
-      const waiters = this.observers.get(monitorId)!;
+      const waiters = this.observers.get(id)!;
       waiters.push(resolve);
 
       const timer = setTimeout(() => {
-        this.removeObserver(monitorId, resolve);
+        this.removeObserver(id, resolve);
         resolve(null);
       }, 30000);
 
@@ -72,8 +72,8 @@ export class LongPollingService implements OnModuleDestroy {
   /**
    * PRODUCER (Ingest Service)
    */
-  async publishUpdate(monitorId: string, data: any) {
-    const channel = `updates:monitor:${monitorId}`;
+  async publishUpdate(id: string, data: any) {
+    const channel = `updates:monitor:${id }`;
     await this.pubClient.publish(channel, JSON.stringify(data));
   }
 
@@ -81,37 +81,37 @@ export class LongPollingService implements OnModuleDestroy {
    * THE FAN-OUT LOGIC
    * This is where the broadcast happens
    */
-  private resolveLocalObservers(monitorId: string, data: any) {
-    const waiters = this.observers.get(monitorId);
+  private resolveLocalObservers(id: string, data: any) {
+    const waiters = this.observers.get(id);
 
     if (!waiters || waiters.length === 0) return;
 
     this.logger.log(
-      `Broadcasting update for Monitor ${monitorId} to ${waiters.length} clients.`,
+      `Broadcasting update for Monitor ${id} to ${waiters.length} clients.`,
     );
 
     waiters.forEach((resolve) => resolve(data));
 
-    this.cleanupMonitor(monitorId);
+    this.cleanupMonitor(id);
   }
 
-  private removeObserver(monitorId: string, resolveFn: any) {
-    const waiters = this.observers.get(monitorId);
+  private removeObserver(id: string, resolveFn: any) {
+    const waiters = this.observers.get(id);
     if (!waiters) return;
 
     const remaining = waiters.filter((fn) => fn !== resolveFn);
 
     if (remaining.length === 0) {
-      this.cleanupMonitor(monitorId);
+      this.cleanupMonitor(id);
     } else {
-      this.observers.set(monitorId, remaining);
+      this.observers.set(id, remaining);
     }
   }
 
-  private cleanupMonitor(monitorId: string) {
-    this.observers.delete(monitorId);
+  private cleanupMonitor(id: string) {
+    this.observers.delete(id);
     this.subClient
-      .unsubscribe(`updates:monitor:${monitorId}`)
+      .unsubscribe(`updates:monitor:${id}`)
       .catch((err) => this.logger.error(`Unsubscribe failed: ${err.message}`));
   }
 }
