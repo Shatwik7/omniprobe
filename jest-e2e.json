@@ -27,7 +27,8 @@
   "coverageReporters": [
     "json",
     "text",
-    "html"
+    "html",
+    "cobertura"
   ],
   "coverageDirectory": "reports/coverage",
   "testMatch": [

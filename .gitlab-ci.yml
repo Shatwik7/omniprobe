@@ -103,3 +103,8 @@ e2e_tests:
     when: always
     reports:
       junit: reports/jest-junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: reports/coverage/cobertura-coverage.xml
+    paths:
+      - reports/coverage/
