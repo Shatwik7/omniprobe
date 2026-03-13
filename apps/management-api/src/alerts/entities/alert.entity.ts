@@ -1,1 +1,1 @@
-export class Alert {}
+export { Alert } from '@app/database';
