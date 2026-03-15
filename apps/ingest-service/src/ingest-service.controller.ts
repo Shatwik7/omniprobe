@@ -18,6 +18,7 @@ export class IngestServiceController {
     @Inject('KAFKA_PRODUCER') private readonly kafkaClient: ClientKafka,
   ) {}
 
+  // Restored missing helper methods
   private toCheckExecutionCompletedEvent(
     data: unknown,
   ): CheckExecutionCompletedEvent | null {

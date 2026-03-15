@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ClientKafka } from '@nestjs/microservices';
 
 import { Monitor, Metric, Incident, AlertPolicy, NotificationChannel } from '@app/database';
@@ -41,11 +41,12 @@ export class IngestServiceService {
    */
   async handleCheckCompletion(event: CheckExecutionCompletedEvent) {
     this.logger.log('Received CheckExecutionCompletedEvent', event);
+
+
     const monitor = await this.monitorRepo.findOne({
       where: { id: event.Request.checkId, isActive: true, isLive: true },
       relations: ['alertPolicy', 'project'],
     });
-    this.logger.log('Fetched monitor for CheckExecutionCompletedEvent', { monitorId: event.Request.checkId, monitor }); 
     if (!monitor) return;
 
     const success = this.isResponseValid(monitor, event);
@@ -53,7 +54,6 @@ export class IngestServiceService {
     await this.storeSuccessMetric(monitor, event, success);
 
     const openIncident = await this.getOpenIncident(monitor.id);
-
     if (!success) {
       if (!openIncident) {
         await this.createIncident(monitor, 'BAD_RESPONSE', null);
@@ -203,13 +203,13 @@ export class IngestServiceService {
   }
 
   /**
-   * Get Open Incident
+   * Get Active Incident for a Monitor
    * @param monitorId : UUID
    * @returns
    */
   private getOpenIncident(monitorId: string) {
     return this.incidentRepo.findOne({
-      where: { monitor: { id: monitorId }, status: IncidentStatus.OPEN },
+      where: { monitor: { id: monitorId }, status: In([IncidentStatus.OPEN, IncidentStatus.ACKNOWLEDGED]) },
     });
   }
 
@@ -218,7 +218,28 @@ export class IngestServiceService {
    * @param monitor Monitor (libs/database)
    * @param reason
    */
-  private async createIncident(monitor: Monitor, reason: string, httpCheckError:HttpCheckError|null) {
+  private buildIncidentTriggeredMessage(
+    monitor: Monitor,
+    reason: string,
+    incidentId: string,
+    channel: string,
+    address: string,
+  ): IncidentTriggeredEvent {
+    return {
+      title: `Incident for monitor ${monitor.name} : System Down`,
+      message: `An incident has been triggered for monitor ${monitor.name} due to ${reason}`,
+      channel,
+      address,
+      Incident: incidentId,
+      Project: monitor.project.id,
+    };
+  }
+
+  private async createIncident(
+    monitor: Monitor,
+    reason: string,
+    httpCheckError: HttpCheckError | null,
+  ) {
     const incident = this.incidentRepo.create({
       monitor,
       status: IncidentStatus.OPEN,
@@ -226,36 +247,39 @@ export class IngestServiceService {
       severity: IncidentSeverity.CRITICAL,
     });
     await this.incidentRepo.save(incident);
+    this.logger.log(`Created incident ${incident.id} for monitor ${monitor.name} due to ${reason}`);
+
+    
     const alertPolicy = monitor.alertPolicy?.id
       ? await this.alertPolicyRepo.findOne({
           where: { id: monitor.alertPolicy.id },
           relations: ['notificationChannels'],
         })
       : null;
+
     await this.monitorRepo.update(monitor.id, { isLive: false });
-    let message: IncidentTriggeredEvent = {
-        title: `Incident for monitor ${monitor.name} : System Down`,
-        message: `An incident has been triggered for monitor ${monitor.name} due to ${reason}`,
-        channel: 'system',
-        address: monitor.project.name,
-        Incident: incident.id,
-        Project: monitor.project.id
-      };
-    this.kafkaClient.emit(Topics.INCIDENTS_TRIGGERED_NOTIFICATIONS, message);
-    if (alertPolicy){
-      alertPolicy.notificationChannels?.forEach((channel: NotificationChannel) => {
-        let message: IncidentTriggeredEvent = {
-          title: `Incident for monitor ${monitor.name} : System Down`,
-          message: `An incident has been triggered for monitor ${monitor.name} due to ${reason}`,
-          channel: channel.channelType,
-          address: channel.address,
-          Incident: incident.id,
-          Project: monitor.project.id
-        };
-        this.kafkaClient.emit(Topics.INCIDENTS_TRIGGERED_NOTIFICATIONS, message);
+
+    const notificationTargets: Array<{ channel: string; address: string }> = [
+      { channel: 'system', address: monitor.project.name },
+    ];
+
+    for (const channel of alertPolicy?.notificationChannels ?? []) {
+      notificationTargets.push({
+        channel: channel.channelType,
+        address: channel.address,
       });
     }
-    return;
+
+    for (const target of notificationTargets) {
+      const message = this.buildIncidentTriggeredMessage(
+        monitor,
+        reason,
+        incident.id,
+        target.channel,
+        target.address,
+      );
+      this.kafkaClient.emit(Topics.INCIDENTS_TRIGGERED_NOTIFICATIONS, message);
+    }
   }
 
   /**

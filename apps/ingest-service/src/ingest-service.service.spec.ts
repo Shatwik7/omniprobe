@@ -19,6 +19,7 @@ describe('IngestServiceService', () => {
   let monitorRepo: jest.Mocked<Repository<Monitor>>;
   let metricRepo: jest.Mocked<Repository<Metric>>;
   let incidentRepo: jest.Mocked<Repository<Incident>>;
+  let alertPolicyRepo: jest.Mocked<Repository<AlertPolicy>>;
   let kafkaClient: jest.Mocked<ClientKafka>;
 
   const mockMonitor = {
@@ -66,6 +67,7 @@ describe('IngestServiceService', () => {
     monitorRepo = module.get(getRepositoryToken(Monitor));
     metricRepo = module.get(getRepositoryToken(Metric));
     incidentRepo = module.get(getRepositoryToken(Incident));
+    alertPolicyRepo = module.get(getRepositoryToken(AlertPolicy));
     kafkaClient = module.get('KAFKA_PRODUCER');
   });
 
@@ -140,7 +142,10 @@ describe('IngestServiceService', () => {
       );
       expect(metricRepo.save).toHaveBeenCalledTimes(1);
       expect(incidentRepo.findOne).toHaveBeenCalledWith({
-        where: { monitor: { id: 'monitor-id' }, status: IncidentStatus.OPEN },
+        where: {
+          monitor: { id: 'monitor-id' },
+          status: expect.objectContaining({ _type: 'in' }),
+        },
       });
       expect(incidentRepo.create).not.toHaveBeenCalled();
     });
@@ -311,6 +316,61 @@ describe('IngestServiceService', () => {
       expect(incidentRepo.create).not.toHaveBeenCalled();
       expect(incidentRepo.save).not.toHaveBeenCalled();
       expect(kafkaClient.emit).not.toHaveBeenCalled();
+    });
+
+    it('should notify system and all alert policy notification channels when creating incident', async () => {
+      const monitorWithPolicy = {
+        ...mockMonitor,
+        alertPolicy: { id: 'policy-id' },
+      } as Monitor;
+
+      monitorRepo.findOne.mockResolvedValue(monitorWithPolicy);
+      incidentRepo.findOne.mockResolvedValue(null);
+      metricRepo.create.mockReturnValue({} as Metric);
+      incidentRepo.create.mockReturnValue({ id: 'incident-id' } as Incident);
+      alertPolicyRepo.findOne.mockResolvedValue({
+        id: 'policy-id',
+        notificationChannels: [
+          { channelType: 'email', address: 'ops@example.com' },
+          { channelType: 'slack', address: '#alerts' },
+        ],
+      } as unknown as AlertPolicy);
+
+      await service.handleCheckFailure(failureEvent);
+
+      const notificationCalls = (kafkaClient.emit as jest.Mock).mock.calls
+        .filter(
+          ([topic]) => topic === Topics.INCIDENTS_TRIGGERED_NOTIFICATIONS,
+        )
+        .map(([, message]) => message);
+
+      expect(alertPolicyRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'policy-id' },
+        relations: ['notificationChannels'],
+      });
+      expect(notificationCalls).toHaveLength(3);
+      expect(notificationCalls).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            channel: 'system',
+            address: monitorWithPolicy.project.name,
+            Incident: 'incident-id',
+            Project: monitorWithPolicy.project.id,
+          }),
+          expect.objectContaining({
+            channel: 'email',
+            address: 'ops@example.com',
+            Incident: 'incident-id',
+            Project: monitorWithPolicy.project.id,
+          }),
+          expect.objectContaining({
+            channel: 'slack',
+            address: '#alerts',
+            Incident: 'incident-id',
+            Project: monitorWithPolicy.project.id,
+          }),
+        ]),
+      );
     });
   });
 });
