@@ -1,5 +1,5 @@
 import { CheckExecutionRequestedEvent, Topics } from '@app/kafka-topics';
-import { Controller, Get, Logger, ValidationPipe } from '@nestjs/common';
+import { Controller, Logger, ValidationPipe } from '@nestjs/common';
 import {
   EventPattern,
   Payload,
@@ -8,48 +8,67 @@ import {
 } from '@nestjs/microservices';
 import { CheckExecutorService } from './checkExecutor.service';
 import { CheckExecutionEventProducerService } from './KafkaProducer.service';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
 
 @Controller()
 export class WorkerController {
-  private readonly logger:Logger=new Logger(WorkerController.name);
+  private readonly logger: Logger = new Logger(WorkerController.name);
+  private readonly pipeValidator = new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    stopAtFirstError: true,
+  });
+
   constructor(
     private readonly EventProducer: CheckExecutionEventProducerService,
     private readonly Processor: CheckExecutorService,
   ) {}
+
   @EventPattern(Topics.CHECK_EXECUTION_REQUESTED)
   async handleMonitoringData(
-    @Payload() raw: any,
+    @Payload() raw: unknown,
     @Ctx() context: KafkaContext,
   ) {
-    this.logger.log(`Received event on topic ${Topics.CHECK_EXECUTION_REQUESTED}: ${JSON.stringify(raw)}`);
     try {
-      const dto = plainToInstance(CheckExecutionRequestedEvent, raw);
-      const errors = await validate(dto);
-      if (errors.length > 0) {
-        this.logger.error('❌ Invalid message. Skipping.');
-        return;
-      }
+      this.logger.log(
+        `Received event on topic ${Topics.CHECK_EXECUTION_REQUESTED}: ${JSON.stringify(raw)}`,
+      );
 
-      const data = await this.Processor.collectHttpTimingMetrics(dto.url);
-      this.logger.log(`Collected HTTP timing metrics: ${JSON.stringify(data)}`) ;
+      const validateMessage =
+        (await this.pipeValidator.transform(raw, {
+          type: 'body',
+          metatype: CheckExecutionRequestedEvent,
+        })) as CheckExecutionRequestedEvent;
+
+      const data = await this.Processor.collectHttpTimingMetrics(
+        validateMessage.url,
+        {
+          method: validateMessage.method,
+          timeout: validateMessage.timeout,
+          headers: validateMessage.headers,
+          body: validateMessage.body,
+        },
+      );
+
+      this.logger.log(
+        `Collected HTTP timing metrics: ${JSON.stringify(data)}`,
+      );
 
       if (data.success) {
         this.EventProducer.CheckCompleted({
-          Request: dto,
+          Request: validateMessage,
           Response: data.metrics,
           region: process.env.REGION || 'IN',
         });
       } else {
         this.EventProducer.CheckFailed({
-          Request: dto,
+          Request: validateMessage,
           Response: data.error,
           region: process.env.REGION || 'IN',
         });
       }
     } catch (e) {
-      this.logger.error('Unexpected error:', e);
+      this.logger.error('Invalid message or unexpected error. Skipping.', e);
     }
   }
 }

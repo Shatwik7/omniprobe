@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
+import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { WorkerController } from './worker-service.controller';
 import { CheckExecutorService } from './checkExecutor.service';
 import { CheckExecutionEventProducerService } from './KafkaProducer.service';
-import { CheckExecutionRequestedEvent } from '@app/kafka-topics';
 import { HttpMethods } from '@app/kafka-topics/enums/HttpMethods';
 import { KafkaContext } from '@nestjs/microservices';
-import { expect, jest, describe, it, beforeEach } from '@jest/globals';
+import { expect, jest, describe, it, beforeEach, afterEach } from '@jest/globals';
 
 describe('WorkerController', () => {
+  let app: INestApplication;
   let controller: WorkerController;
   let checkExecutorService: CheckExecutorService;
   let eventProducerService: CheckExecutionEventProducerService;
@@ -33,12 +33,29 @@ describe('WorkerController', () => {
       ],
     }).compile();
 
-    controller = module.get<WorkerController>(WorkerController);
+    app = module.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        stopAtFirstError: true,
+        disableErrorMessages: true,
+        exceptionFactory: () => null,
+      }),
+    );
+    await app.init();
+
+    controller = app.get<WorkerController>(WorkerController);
     checkExecutorService =
-      module.get<CheckExecutorService>(CheckExecutorService);
-    eventProducerService = module.get<CheckExecutionEventProducerService>(
+      app.get<CheckExecutorService>(CheckExecutorService);
+    eventProducerService = app.get<CheckExecutionEventProducerService>(
       CheckExecutionEventProducerService,
     );
+  });
+
+  afterEach(async () => {
+    await app.close();
   });
 
   it('should be defined', () => {
@@ -53,21 +70,90 @@ describe('WorkerController', () => {
       method: HttpMethods.GET,
       timeout: 5000,
       enqueuedAt: new Date().toISOString(),
+      headers: {
+        Authorization: 'Bearer test-token',
+      },
+      body: '{"ping":"pong"}',
     };
 
     const mockContext = {} as KafkaContext;
 
-    it('should skip processing if validation fails', async () => {
-      const invalidPayload = { url: 'not-a-url' };
+    it('should skip processing for invalid url', async () => {
+      const invalidPayload = { ...validPayload, url: 'not-a-url' };
       const loggerErrorSpy = jest
         .spyOn(Logger.prototype, 'error')
         .mockImplementation(() => {});
 
       await controller.handleMonitoringData(invalidPayload, mockContext);
 
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Invalid message'),
-      );
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      expect(
+        checkExecutorService.collectHttpTimingMetrics,
+      ).not.toHaveBeenCalled();
+
+      loggerErrorSpy.mockRestore();
+    });
+
+    it('should skip processing for invalid method enum', async () => {
+      const invalidPayload = { ...validPayload, method: 'TRACE' };
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => {});
+
+      await controller.handleMonitoringData(invalidPayload, mockContext);
+
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      expect(
+        checkExecutorService.collectHttpTimingMetrics,
+      ).not.toHaveBeenCalled();
+
+      loggerErrorSpy.mockRestore();
+    });
+
+    it('should skip processing for non-positive timeout', async () => {
+      const invalidPayload = { ...validPayload, timeout: 0 };
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => {});
+
+      await controller.handleMonitoringData(invalidPayload, mockContext);
+
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      expect(
+        checkExecutorService.collectHttpTimingMetrics,
+      ).not.toHaveBeenCalled();
+
+      loggerErrorSpy.mockRestore();
+    });
+
+    it('should skip processing for invalid enqueuedAt date string', async () => {
+      const invalidPayload = { ...validPayload, enqueuedAt: 'yesterday' };
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => {});
+
+      await controller.handleMonitoringData(invalidPayload, mockContext);
+
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      expect(
+        checkExecutorService.collectHttpTimingMetrics,
+      ).not.toHaveBeenCalled();
+
+      loggerErrorSpy.mockRestore();
+    });
+
+    it('should skip processing when headers is not an object', async () => {
+      const invalidPayload = {
+        ...validPayload,
+        headers: 'authorization: bearer token',
+      };
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => {});
+
+      await controller.handleMonitoringData(invalidPayload, mockContext);
+
+      expect(loggerErrorSpy).toHaveBeenCalled();
       expect(
         checkExecutorService.collectHttpTimingMetrics,
       ).not.toHaveBeenCalled();
@@ -92,7 +178,12 @@ describe('WorkerController', () => {
 
       expect(
         checkExecutorService.collectHttpTimingMetrics,
-      ).toHaveBeenCalledWith(validPayload.url);
+      ).toHaveBeenCalledWith(validPayload.url, {
+        method: validPayload.method,
+        timeout: validPayload.timeout,
+        headers: validPayload.headers,
+        body: validPayload.body,
+      });
       expect(eventProducerService.CheckCompleted).toHaveBeenCalledWith({
         Request: expect.objectContaining(validPayload),
         Response: metrics,
@@ -101,6 +192,59 @@ describe('WorkerController', () => {
       expect(eventProducerService.CheckFailed).not.toHaveBeenCalled();
 
       consoleSpy.mockRestore();
+    });
+
+    it('should process when optional headers and body are omitted', async () => {
+      const payloadWithoutOptionalFields = {
+        ...validPayload,
+        headers: undefined,
+        body: undefined,
+      };
+      const metrics = { status_code: 204, ttfb: 65 };
+      (
+        checkExecutorService.collectHttpTimingMetrics as jest.Mock<any>
+      ).mockResolvedValue({
+        success: true,
+        metrics: metrics,
+      });
+
+      await controller.handleMonitoringData(
+        payloadWithoutOptionalFields,
+        mockContext,
+      );
+
+      expect(
+        checkExecutorService.collectHttpTimingMetrics,
+      ).toHaveBeenCalledWith(payloadWithoutOptionalFields.url, {
+        method: payloadWithoutOptionalFields.method,
+        timeout: payloadWithoutOptionalFields.timeout,
+        headers: payloadWithoutOptionalFields.headers,
+        body: payloadWithoutOptionalFields.body,
+      });
+      expect(eventProducerService.CheckCompleted).toHaveBeenCalledWith({
+        Request: expect.objectContaining(payloadWithoutOptionalFields),
+        Response: metrics,
+        region: process.env.REGION || 'IN',
+      });
+    });
+
+    it('should skip processing when non-whitelisted field is present', async () => {
+      const invalidPayload = {
+        ...validPayload,
+        unknownField: 'not-allowed',
+      };
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => {});
+
+      await controller.handleMonitoringData(invalidPayload, mockContext);
+
+      expect(loggerErrorSpy).toHaveBeenCalled();
+      expect(
+        checkExecutorService.collectHttpTimingMetrics,
+      ).not.toHaveBeenCalled();
+
+      loggerErrorSpy.mockRestore();
     });
 
     it('should call CheckFailed when processing fails', async () => {
@@ -120,7 +264,12 @@ describe('WorkerController', () => {
 
       expect(
         checkExecutorService.collectHttpTimingMetrics,
-      ).toHaveBeenCalledWith(validPayload.url);
+      ).toHaveBeenCalledWith(validPayload.url, {
+        method: validPayload.method,
+        timeout: validPayload.timeout,
+        headers: validPayload.headers,
+        body: validPayload.body,
+      });
       expect(eventProducerService.CheckFailed).toHaveBeenCalledWith({
         Request: expect.objectContaining(validPayload),
         Response: error,
@@ -131,7 +280,7 @@ describe('WorkerController', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should handle unexpected errors gracefully', async () => {
+    it('should handle unexpected executor errors gracefully', async () => {
       (
         checkExecutorService.collectHttpTimingMetrics as jest.Mock<any>
       ).mockRejectedValue(new Error('Unexpected'));
@@ -141,10 +290,7 @@ describe('WorkerController', () => {
 
       await controller.handleMonitoringData(validPayload, mockContext);
 
-      expect(loggerErrorSpy).toHaveBeenCalledWith(
-        'Unexpected error:',
-        expect.any(Error),
-      );
+      expect(loggerErrorSpy).toHaveBeenCalled();
 
       loggerErrorSpy.mockRestore();
     });

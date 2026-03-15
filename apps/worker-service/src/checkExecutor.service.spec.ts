@@ -110,6 +110,22 @@ describe('WorkerServiceController', () => {
     expect(a).toBeDefined();
   });
 
+  it('TIMEOUT ERROR FOR CROSSING 33 SEC', async () => {
+    const a = await checkExecutorService.collectHttpTimingMetrics(
+      'https://httpbin.org/delay/33',
+      10
+    );
+    expect(a.success).toBe(false);
+    if (!a.success) {
+      expect(a.error.error_type).toBeDefined();
+      expect(a.error.error_message).toBeDefined();
+      expect(a.error.timestamp).toBeDefined();
+      expect(a.error.url).toBeDefined();
+      expect(a.error.partial_timings).toBeDefined();
+    }
+    expect(a).toBeDefined();
+  });
+
   it('STATUS CODE 500', async () => {
     const a = await checkExecutorService.collectHttpTimingMetrics(
       'https://httpbin.org/status/500',

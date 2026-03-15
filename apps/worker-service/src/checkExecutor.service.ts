@@ -10,18 +10,41 @@ import * as http from 'http';
 import * as https from 'https';
 import { URL } from 'url';
 
+type HttpRequestOptions = {
+  timeout?: number;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+};
+
 @Injectable()
 export class CheckExecutorService {
   private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
 
   async collectHttpTimingMetrics(
     urlString: string,
-    timeout: number = this.DEFAULT_TIMEOUT,
+    optionsOrTimeout: HttpRequestOptions | number = this.DEFAULT_TIMEOUT,
   ): Promise<HttpCheckResult> {
     return new Promise((resolve) => {
       const parsedUrl = new URL(urlString);
       const isHttps = parsedUrl.protocol === 'https:';
       const client = isHttps ? https : http;
+      const timeout =
+        typeof optionsOrTimeout === 'number'
+          ? optionsOrTimeout
+          : (optionsOrTimeout.timeout ?? this.DEFAULT_TIMEOUT);
+      const method =
+        typeof optionsOrTimeout === 'number'
+          ? 'GET'
+          : (optionsOrTimeout.method ?? 'GET');
+      const headers =
+        typeof optionsOrTimeout === 'number'
+          ? undefined
+          : optionsOrTimeout.headers;
+      const body =
+        typeof optionsOrTimeout === 'number'
+          ? undefined
+          : optionsOrTimeout.body;
 
       const timings: any = {
         start: Date.now(),
@@ -85,7 +108,7 @@ export class CheckExecutorService {
           hostname: parsedUrl.hostname,
           port: parsedUrl.port,
           path: parsedUrl.pathname + parsedUrl.search,
-          method: 'GET',
+          method,
           timeout: totalTimeout,
           agent: false,
           lookup: (
@@ -124,6 +147,7 @@ export class CheckExecutorService {
             Pragma: 'no-cache',
             Expires: '0',
             Connection: 'close',
+            ...(headers || {}),
           },
         },
         (res) => {
@@ -307,6 +331,10 @@ export class CheckExecutorService {
         });
         req.destroy();
       }, totalTimeout);
+
+      if (body && !['GET', 'HEAD'].includes(method.toUpperCase())) {
+        req.write(body);
+      }
 
       req.end();
     });
