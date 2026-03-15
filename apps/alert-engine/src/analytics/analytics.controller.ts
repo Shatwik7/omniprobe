@@ -40,20 +40,23 @@ export class AnalyticsController {
   }
 
   @EventPattern(Topics.CHECK_ANALYTICS_REQUESTED)
-  async create(@Payload() createAnalyticsDto: unknown) {
-    this.logger.log(`Received event on topic ${Topics.CHECK_ANALYTICS_REQUESTED}: ${JSON.stringify(createAnalyticsDto)}`);
-    const data = this.parseToCreateAnalyticsDto(createAnalyticsDto);
-    if (!data) return;
+  async create(@Payload() message: unknown) {
+    this.logger.log(`Received event on topic ${Topics.CHECK_ANALYTICS_REQUESTED}: ${JSON.stringify(message)}`);
+
+    const data = this.parseToCreateAnalyticsDto(message);
+    if (!data) {
+      return;
+    }
 
     const errors = await validate(data);
     if (errors.length > 0) {
-      this.logger.log('❌ Invalid message. Skipping.');
+      this.logger.log('Invalid analytics message. Skipping.', errors);
       return;
     }
 
     const [alert, monitor, metric]=await Promise.all([this.analyticsService.getAlertPolicy(data.MonitorId),this.analyticsService.getMonitor(data.MonitorId), this.analyticsService.getMetric(data.MetricId)]);
     const sla_letency=alert.rules?.rules.find(a=>a.metric=="sla_latency")?.threshold as number;
-    const analytics = await this.analyticsService.processMetricAndUpdateAnalytics(metric, monitor.id,data.Region, sla_letency);
+    const analytics = await this.analyticsService.processMetricAndUpdateAnalytics(metric, monitor.id,data.Region, sla_letency,10);
     await this.longPollingService.publishUpdate(`analytics:${monitor.id}`, analytics)
     return null;
   }

@@ -23,7 +23,7 @@ export class AnalyticsService {
    * @param monitorId - UUID of the monitor
    * @param region - Region name (default:'IN')
    * @param slaLatency - SLA latency threshold (default: 2000ms)
-   * @param windowSize - Size of the metrics window (default: 20)
+   * @param windowSize - Size of the metrics window (default: 10)
    * @returns Saved Analytics entity
    */
   async processMetricAndUpdateAnalytics(
@@ -31,7 +31,7 @@ export class AnalyticsService {
     monitorId: string,
     region: string = 'IN',
     slaLatency: number = 2000,
-    windowSize: number = 20,
+    windowSize: number = 10,
   ): Promise<Analytics> {
     try {
       // Validate inputs
