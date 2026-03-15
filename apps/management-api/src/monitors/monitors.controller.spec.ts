@@ -63,6 +63,13 @@ describe('MonitorsController', () => {
       target: 'https://example.com/health',
       method: 'GET',
       frequencySeconds: 60,
+      isLive: true,
+      isActive: true,
+      headers: { authorization: 'Bearer token' },
+      body: '{"check":"health"}',
+      maintencePeriods: [{ start: '2026-03-15T01:00:00Z', end: '2026-03-15T02:00:00Z' }],
+      expectedStatus: 200,
+      expectedBody: { ok: true },
       projectId: 'project-1',
     };
     const created = { id: 'monitor-1', name: 'API Health' };
@@ -103,12 +110,22 @@ describe('MonitorsController', () => {
 
     const response = await controller.update('project-1', 'monitor-1', {
       name: 'API Health Updated',
+      isActive: false,
+      headers: { authorization: 'Bearer updated' },
+      body: '{"check":"updated"}',
+      expectedStatus: 201,
     });
 
     expect(monitorsService.update).toHaveBeenCalledWith(
       'project-1',
       'monitor-1',
-      { name: 'API Health Updated' },
+      {
+        name: 'API Health Updated',
+        isActive: false,
+        headers: { authorization: 'Bearer updated' },
+        body: '{"check":"updated"}',
+        expectedStatus: 201,
+      },
     );
     expect(response).toEqual(updated);
   });

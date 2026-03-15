@@ -43,6 +43,21 @@ describe('Monitors (e2e, real app + real db)', () => {
     target: 'https://example.com/health',
     method: 'GET',
     frequencySeconds: 30,
+    isLive: true,
+    isActive: true,
+    headers: {
+      authorization: 'Bearer seed-token',
+      'x-monitor': 'e2e',
+    },
+    body: JSON.stringify({ ping: true }),
+    maintencePeriods: [
+      {
+        start: '2026-03-15T01:00:00.000Z',
+        end: '2026-03-15T02:00:00.000Z',
+      },
+    ],
+    expectedStatus: 200,
+    expectedBody: { ok: true },
     projectId,
   });
 
@@ -179,6 +194,23 @@ describe('Monitors (e2e, real app + real db)', () => {
         id: expect.any(String),
         name: expect.any(String),
         target: 'https://example.com/health',
+        method: 'GET',
+        frequencySeconds: 30,
+        isLive: true,
+        isActive: true,
+        headers: expect.objectContaining({
+          authorization: 'Bearer seed-token',
+          'x-monitor': 'e2e',
+        }),
+        body: JSON.stringify({ ping: true }),
+        maintencePeriods: expect.arrayContaining([
+          expect.objectContaining({
+            start: '2026-03-15T01:00:00.000Z',
+            end: '2026-03-15T02:00:00.000Z',
+          }),
+        ]),
+        expectedStatus: 200,
+        expectedBody: expect.objectContaining({ ok: true }),
       }),
     );
   });
@@ -231,13 +263,25 @@ describe('Monitors (e2e, real app + real db)', () => {
         `/teams/${teamId}/projects/${projectId}/monitors/${created.body.id}`,
       )
       .set('Authorization', `Bearer ${auth.token}`)
-      .send({ name: updatedName })
+      .send({
+        name: updatedName,
+        isActive: false,
+        headers: { authorization: 'Bearer updated-token' },
+        body: JSON.stringify({ ping: false }),
+        expectedStatus: 201,
+      })
       .expect(200);
 
     expect(updated.body).toEqual(
       expect.objectContaining({
         id: created.body.id,
         name: updatedName,
+        isActive: false,
+        headers: expect.objectContaining({
+          authorization: 'Bearer updated-token',
+        }),
+        body: JSON.stringify({ ping: false }),
+        expectedStatus: 201,
       }),
     );
   });

@@ -60,7 +60,15 @@ describe('MonitorsService', () => {
       target: 'https://example.com/health',
       method: 'GET',
       frequencySeconds: 60,
+      isLive: true,
+      isActive: true,
+      headers: { authorization: 'Bearer token' },
+      body: '{"check":"health"}',
+      maintencePeriods: [{ start: '2026-03-15T01:00:00Z', end: '2026-03-15T02:00:00Z' }],
+      expectedStatus: 200,
+      expectedBody: { ok: true },
       projectId: 'project-1',
+      alertPolicyId: '11111111-1111-1111-1111-111111111111',
     };
     const created = { name: 'API Health' } as Monitor;
     const saved = { id: 'monitor-1', name: 'API Health' } as Monitor;
@@ -75,7 +83,15 @@ describe('MonitorsService', () => {
       target: dto.target,
       method: dto.method,
       frequencySeconds: dto.frequencySeconds,
+      isLive: dto.isLive,
+      isActive: dto.isActive,
+      headers: dto.headers,
+      body: dto.body,
+      maintencePeriods: dto.maintencePeriods,
+      expectedStatus: dto.expectedStatus,
+      expectedBody: dto.expectedBody,
       project: { id: dto.projectId },
+      alertPolicy: { id: dto.alertPolicyId },
     });
     expect(monitorRepository.save).toHaveBeenCalledWith(created);
     expect(response).toEqual(saved);
@@ -164,10 +180,20 @@ describe('MonitorsService', () => {
 
     const response = await service.update('project-1', 'monitor-1', {
       name: 'API Health Updated',
+      isActive: false,
+      headers: { authorization: 'Bearer updated' },
+      body: '{"check":"updated"}',
+      expectedStatus: 201,
     });
 
     expect(monitorRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'API Health Updated' }),
+      expect.objectContaining({
+        name: 'API Health Updated',
+        isActive: false,
+        headers: { authorization: 'Bearer updated' },
+        body: '{"check":"updated"}',
+        expectedStatus: 201,
+      }),
     );
     expect(response).toEqual(saved);
   });
