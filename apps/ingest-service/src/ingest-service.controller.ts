@@ -72,11 +72,11 @@ export class IngestServiceController {
     const data = this.toCheckExecutionCompletedEvent(message);
     if (!data) return;
 
-    // const errors = await validate(data);
-    // if (errors.length > 0) {
-    //   this.logger.log('❌ Invalid message. Skipping.', errors);
-    //   return;
-    // }
+    const errors = await validate(data);
+    if (errors.length > 0) {
+      this.logger.log('❌ Invalid message. Skipping.', errors);
+      return;
+    }
 
     await this.ingestServiceService.handleCheckCompletion(data);
     return null;
@@ -88,11 +88,11 @@ export class IngestServiceController {
     const data = this.toCheckExecutionFailedEvent(message);
     if (!data) return;
 
-    // const errors = await validate(data);
-    // if (errors.length > 0) {
-    //   this.logger.log('❌ Invalid message. Skipping.', errors);
-    //   return;
-    // }
+    const errors = await validate(data);
+    if (errors.length > 0) {
+      this.logger.log('❌ Invalid message. Skipping.', errors);
+      return;
+    }
 
     await this.ingestServiceService.handleCheckFailure(data);
     return null;
