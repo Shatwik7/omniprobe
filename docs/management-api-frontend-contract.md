@@ -376,15 +376,29 @@ Note:
   "name": "string, required",
   "target": "string, required, valid URL",
   "method": "GET | POST | PATCH | DELETE | PUT",
-  "frequencySeconds": "integer, required",
+  "frequencySeconds": "integer, required, min 1",
+  "isLive": "boolean, optional, default true",
+  "isActive": "boolean, optional, default true",
+  "headers": "object, optional",
+  "body": "string, optional",
+  "maintencePeriods": "array<object> | null, optional",
+  "expectedStatus": "integer, optional",
+  "expectedBody": "object, optional",
   "projectId": "uuid, required",
-  "alertPolicyId": "string, optional"
+  "alertPolicyId": "uuid, optional"
 }
 ```
 
 #### `UpdateMonitorDto`
 
 Partial of `CreateMonitorDto`.
+
+Common update use cases:
+
+- pause/enable monitor with `isActive`
+- switch runtime behavior with `headers`, `body`, `method`
+- change expectations with `expectedStatus` and `expectedBody`
+- adjust maintenance windows with `maintencePeriods`
 
 ### Metrics DTOs
 
@@ -819,6 +833,7 @@ All monitor routes are guarded by both JWT auth and team membership.
 Notes:
 
 - this is an internal async side-effect; the REST response remains the created `Monitor`
+- send `projectId` in body matching `:projectId` from route
 
 ### `GET /teams/:teamId/projects/:projectId/monitors`
 
@@ -1602,6 +1617,13 @@ curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors" \
     "target":"https://example.com/health",
     "method":"GET",
     "frequencySeconds":60,
+    "isLive":true,
+    "isActive":true,
+    "headers":{"x-monitor":"homepage","authorization":"Bearer internal-token"},
+    "body":"{\"ping\":true}",
+    "maintencePeriods":[{"start":"2026-03-15T01:00:00.000Z","end":"2026-03-15T02:00:00.000Z"}],
+    "expectedStatus":200,
+    "expectedBody":{"ok":true},
     "projectId":"{{PROJECT_ID}}",
     "alertPolicyId":"0bc4f722-4a55-4f6e-9fc8-4f7de5ccce04"
   }'
@@ -1618,6 +1640,21 @@ curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors" \
   "frequencySeconds": 60,
   "isLive": true,
   "isActive": true,
+  "headers": {
+    "x-monitor": "homepage",
+    "authorization": "Bearer internal-token"
+  },
+  "body": "{\"ping\":true}",
+  "maintencePeriods": [
+    {
+      "start": "2026-03-15T01:00:00.000Z",
+      "end": "2026-03-15T02:00:00.000Z"
+    }
+  ],
+  "expectedStatus": 200,
+  "expectedBody": {
+    "ok": true
+  },
   "createdAt": "2026-03-14T10:03:00.000Z",
   "updatedAt": "2026-03-14T10:03:00.000Z"
 }
@@ -1641,7 +1678,15 @@ Internal side effect (not in response):
 curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}" \
   -H "Authorization: Bearer {{TOKEN}}" \
   -H "Content-Type: application/json" \
-  -d '{"name":"Homepage Health (Updated)","frequencySeconds":30}'
+  -d '{
+    "name":"Homepage Health (Updated)",
+    "frequencySeconds":30,
+    "isActive":false,
+    "headers":{"authorization":"Bearer updated-token"},
+    "body":"{\"ping\":false}",
+    "expectedStatus":201,
+    "expectedBody":{"ok":false}
+  }'
 ```
 
 200 Response: updated `Monitor`.
@@ -2362,6 +2407,13 @@ curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors" \
     "target":"https://example.com/health",
     "method":"GET",
     "frequencySeconds":60,
+    "isLive":true,
+    "isActive":true,
+    "headers":{"x-monitor":"homepage","authorization":"Bearer internal-token"},
+    "body":"{\"ping\":true}",
+    "maintencePeriods":[{"start":"2026-03-15T01:00:00.000Z","end":"2026-03-15T02:00:00.000Z"}],
+    "expectedStatus":200,
+    "expectedBody":{"ok":true},
     "projectId":"{{PROJECT_ID}}",
     "alertPolicyId":"{{ALERT_POLICY_ID}}"
   }'
@@ -2454,6 +2506,11 @@ curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{
     "target":"https://example.com/status",
     "method":"GET",
     "frequencySeconds":30,
+    "isActive":false,
+    "headers":{"authorization":"Bearer updated-token"},
+    "body":"{\"ping\":false}",
+    "expectedStatus":201,
+    "expectedBody":{"ok":false},
     "projectId":"{{PROJECT_ID}}",
     "alertPolicyId":"{{ALERT_POLICY_ID}}"
   }'
@@ -2468,6 +2525,14 @@ curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{
   "frequencySeconds": 30,
   "isLive": true,
   "isActive": true,
+  "headers": {
+    "authorization": "Bearer updated-token"
+  },
+  "body": "{\"ping\":false}",
+  "expectedStatus": 201,
+  "expectedBody": {
+    "ok": false
+  },
   "updatedAt": "2026-03-14T10:04:00.000Z"
 }
 ```

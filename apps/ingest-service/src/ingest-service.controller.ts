@@ -68,29 +68,33 @@ export class IngestServiceController {
 
   @EventPattern(Topics.CHECK_EXECUTION_COMPLETED)
   async handleCheckExecutionCompleted(@Payload() message: CheckExecutionCompletedEvent) {
+    this.logger.log('Received CheckExecutionCompletedEvent', message);
     const data = this.toCheckExecutionCompletedEvent(message);
     if (!data) return;
 
-    const errors = await validate(data);
-    if (errors.length > 0) {
-      this.logger.log('❌ Invalid message. Skipping.');
-      return;
-    }
+    // const errors = await validate(data);
+    // if (errors.length > 0) {
+    //   this.logger.log('❌ Invalid message. Skipping.', errors);
+    //   return;
+    // }
 
     await this.ingestServiceService.handleCheckCompletion(data);
+    return null;
   }
 
   @EventPattern(Topics.CHECK_EXECUTION_FAILED)
   async handleCheckExecutionFailed(@Payload() message: CheckExecutionFailedEvent) {
+    this.logger.log('Received CheckExecutionFailedEvent', message);
     const data = this.toCheckExecutionFailedEvent(message);
     if (!data) return;
 
-    const errors = await validate(data);
-    if (errors.length > 0) {
-      this.logger.log('❌ Invalid message. Skipping.');
-      return;
-    }
+    // const errors = await validate(data);
+    // if (errors.length > 0) {
+    //   this.logger.log('❌ Invalid message. Skipping.', errors);
+    //   return;
+    // }
 
     await this.ingestServiceService.handleCheckFailure(data);
+    return null;
   }
 }

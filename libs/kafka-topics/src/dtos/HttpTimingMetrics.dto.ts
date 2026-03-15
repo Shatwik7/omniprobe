@@ -1,39 +1,39 @@
-import { IsEnum, IsNumber, IsPositive, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsString, Min } from 'class-validator';
 
 export class HttpTimingMetrics {
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   dns_lookup_end!: number;
 
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   tcp_beginning_start!: number;
 
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   tcp_end!: number;
 
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   tls_start!: number;
 
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   tls_end!: number;
 
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   ttfb!: number;
 
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   tdt!: number;
 
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   server_processing_time!: number;
 
-  @IsPositive()
+  @Min(0)
   @IsNumber()
   status_code!: number;
 }

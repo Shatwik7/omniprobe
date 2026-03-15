@@ -33,20 +33,18 @@ export class CheckExecutionEventProducerService
   }
 
   CheckFailed(data: CheckExecutionFailedEvent) {
-    const a = this.kafkaClient.emit<any, CheckExecutionFailedEvent>(
+    this.kafkaClient.emit(
       Topics.CHECK_EXECUTION_FAILED,
       data,
     );
-    console.log(a);
     return;
   }
 
   CheckCompleted(data: CheckExecutionCompletedEvent) {
-    const a = this.kafkaClient.emit<any, CheckExecutionCompletedEvent>(
+    this.kafkaClient.emit(
       Topics.CHECK_EXECUTION_COMPLETED,
       data,
     );
-    console.log(a);
     return;
   }
 }

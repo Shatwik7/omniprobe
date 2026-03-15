@@ -5,6 +5,7 @@ import {
   HttpTimingMetrics,
 } from '@app/kafka-topics';
 import { Injectable } from '@nestjs/common';
+import * as dns from 'dns';
 import * as http from 'http';
 import * as https from 'https';
 import { URL } from 'url';
@@ -34,6 +35,21 @@ export class CheckExecutorService {
       };
 
       let timeoutHandle: NodeJS.Timeout;
+      let settled = false;
+      let req: http.ClientRequest;
+      const totalTimeout = Math.min(timeout, this.DEFAULT_TIMEOUT);
+      const deadline = Date.now() + totalTimeout;
+
+      const remainingTime = () => Math.max(deadline - Date.now(), 0);
+
+      const settle = (result: HttpCheckResult) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        resolve(result);
+      };
 
       const createError = (
         errorType: HttpErrorType,
@@ -64,15 +80,50 @@ export class CheckExecutorService {
         }
       };
 
-      const req = client.request(
+      req = client.request(
         {
           hostname: parsedUrl.hostname,
           port: parsedUrl.port,
           path: parsedUrl.pathname + parsedUrl.search,
           method: 'GET',
-          timeout: timeout,
+          timeout: totalTimeout,
+          agent: false,
+          lookup: (
+            hostname: string,
+            options: any,
+            callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void,
+          ) => {
+            let done = false;
+            const dnsTimeout = remainingTime();
+
+            if (dnsTimeout <= 0) {
+              const err = new Error('DNS lookup timeout') as NodeJS.ErrnoException;
+              err.code = 'ETIMEDOUT';
+              callback(err, '' as unknown as string, 0);
+              return;
+            }
+
+            const dnsTimer = setTimeout(() => {
+              if (done) return;
+              done = true;
+              const err = new Error('DNS lookup timeout') as NodeJS.ErrnoException;
+              err.code = 'ETIMEDOUT';
+              callback(err, '' as unknown as string, 0);
+            }, dnsTimeout);
+
+            dns.lookup(hostname, options, (err, address, family) => {
+              if (done) return;
+              done = true;
+              clearTimeout(dnsTimer);
+              callback(err, address, family);
+            });
+          },
           headers: {
             'User-Agent': 'Node.js HTTP Timing Client',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
+            Connection: 'close',
           },
         },
         (res) => {
@@ -95,7 +146,7 @@ export class CheckExecutorService {
               timings.tcp_end || timings.tcp_beginning_start;
             timings.server_processing_time = timings.ttfb - connectionTime;
 
-            resolve({
+            settle({
               success: true,
               metrics: {
                 dns_lookup_end: timings.dns_lookup_end,
@@ -112,8 +163,7 @@ export class CheckExecutorService {
           });
 
           res.on('error', (error) => {
-            cleanup();
-            resolve({
+            settle({
               success: false,
               error: createError(HttpErrorType.RESPONSE_ERROR, error),
             });
@@ -125,8 +175,7 @@ export class CheckExecutorService {
       req.on('socket', (socket) => {
         socket.on('lookup', (err, address, family, host) => {
           if (err) {
-            cleanup();
-            resolve({
+            settle({
               success: false,
               error: createError(HttpErrorType.DNS_LOOKUP_ERROR, err),
             });
@@ -142,8 +191,7 @@ export class CheckExecutorService {
         });
 
         socket.on('timeout', () => {
-          cleanup();
-          resolve({
+          settle({
             success: false,
             error: createError(
               HttpErrorType.TIMEOUT_ERROR,
@@ -181,7 +229,7 @@ export class CheckExecutorService {
             errorType = HttpErrorType.CERT_ERROR;
           }
 
-          resolve({
+          settle({
             success: false,
             error: createError(errorType, error),
           });
@@ -196,8 +244,7 @@ export class CheckExecutorService {
 
           // TLS-specific errors
           (socket as any).on('tlsClientError', (error: Error) => {
-            cleanup();
-            resolve({
+            settle({
               success: false,
               error: createError(HttpErrorType.TLS_HANDSHAKE_ERROR, error),
             });
@@ -207,7 +254,6 @@ export class CheckExecutorService {
 
       // Request-level error handling
       req.on('error', (error: any) => {
-        cleanup();
         let errorType = HttpErrorType.UNKNOWN_ERROR;
 
         if (error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN') {
@@ -232,15 +278,14 @@ export class CheckExecutorService {
           errorType = HttpErrorType.CERT_ERROR;
         }
 
-        resolve({
+        settle({
           success: false,
           error: createError(errorType, error),
         });
       });
 
       req.on('abort', () => {
-        cleanup();
-        resolve({
+        settle({
           success: false,
           error: createError(
             HttpErrorType.REQUEST_ABORTED,
@@ -252,16 +297,16 @@ export class CheckExecutorService {
 
       // Overall timeout
       timeoutHandle = setTimeout(() => {
-        resolve({
+        settle({
           success: false,
           error: createError(
             HttpErrorType.TIMEOUT_ERROR,
-            new Error(`Request timeout after ${timeout}ms`),
+            new Error(`Request timeout after ${totalTimeout}ms`),
             'ETIMEDOUT',
           ),
         });
         req.destroy();
-      }, timeout);
+      }, totalTimeout);
 
       req.end();
     });

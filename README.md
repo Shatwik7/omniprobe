@@ -135,6 +135,22 @@ Interactive API docs: `http://localhost:3000/api/doc`
   ```
 - Coverage report generated under `coverage/` and detailed HTML under `reports/`.
 
+#### Seeding the database
+Run the standalone seeder after Postgres is available:
+
+```bash
+npm run seed:db
+```
+
+The script creates related users, teams, projects, alert policies, monitors, metrics, alerts, incidents, notifications, and analytics records. User passwords are hashed with `argon2` before insert.
+
+Useful options:
+
+```bash
+npm run seed:db -- --metrics-per-monitor=300 --teams=4 --projects-per-team=3
+npm run seed:db -- --keep-existing
+```
+
 ---
 
 ### 📦 Deployment

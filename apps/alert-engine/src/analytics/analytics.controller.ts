@@ -41,6 +41,7 @@ export class AnalyticsController {
 
   @EventPattern(Topics.CHECK_ANALYTICS_REQUESTED)
   async create(@Payload() createAnalyticsDto: unknown) {
+    this.logger.log(`Received event on topic ${Topics.CHECK_ANALYTICS_REQUESTED}: ${JSON.stringify(createAnalyticsDto)}`);
     const data = this.parseToCreateAnalyticsDto(createAnalyticsDto);
     if (!data) return;
 

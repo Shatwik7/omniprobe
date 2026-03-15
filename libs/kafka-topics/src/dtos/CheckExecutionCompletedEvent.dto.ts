@@ -12,7 +12,7 @@ export class CheckExecutionCompletedEvent {
   @Type(() => HttpTimingMetrics)
   Response!: HttpTimingMetrics;
 
-  @IsEnum(['EU', 'IN', 'US', 'AU'])
+  @IsEnum(['EU', 'IN', 'NA', 'AU'], { message: 'Region must be one of EU, IN, NA, AU' })
   @IsString()
-  region!: string;
+  region: string = 'IN';
 }

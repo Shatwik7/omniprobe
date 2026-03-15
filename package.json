@@ -6,9 +6,10 @@
   "private": true,
   "license": "owner reserved github@shatwik7",
   "scripts": {
-    "start:all": "concurrently \"npm run start:dev ingest-service\" \"npm run start:dev worker-service\" \"npm run start:dev alert-engine\" \"npm run start:dev management-api\" \"npm run start:dev notification-service\"",
+    "start:all": "concurrently \"npm run start:dev ingest-service\" \"npm run start:dev worker-service\" \"npm run start:dev alert-engine\" \"npm run start:dev management-api\" \"npm run start:dev notification-service\" \"npm run start:dev scheduler-service\"",
     "dockerize:management-api": "docker build -f apps/management-api/Dockerfile . -t management-api",
     "build": "nest build",
+    "seed:db": "ts-node -r tsconfig-paths/register scripts/seed-database.ts",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

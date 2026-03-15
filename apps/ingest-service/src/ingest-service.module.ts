@@ -19,9 +19,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         name: 'KAFKA_PRODUCER',
         transport: Transport.KAFKA,
         options: {
+          producerOnlyMode: true,
           client: {
-            clientId: 'scheduler-producer',
-            brokers: ['localhost:9092'],
+            clientId: 'ingest-service-producer',
+            brokers: [process.env.KAFKA_URL || 'localhost:9092'],
             retry: {
               retries: 10,
             }

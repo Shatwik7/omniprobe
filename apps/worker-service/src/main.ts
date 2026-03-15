@@ -14,7 +14,7 @@ async function bootstrap() {
       transport: Transport.KAFKA,
       options: {
         client: {
-          brokers: [process.env.KAFKA_URL || 'localhost:9092'], // Use 'kafka:9092' if running inside Docker
+          brokers: [process.env.KAFKA_URL || 'localhost:9092'], // Use 'kafka:29092' if running inside Docker
         },
         consumer: {
           groupId: 'monitoring-worker-group',

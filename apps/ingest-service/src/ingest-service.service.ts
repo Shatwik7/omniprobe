@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientKafka } from '@nestjs/microservices';
@@ -16,6 +16,7 @@ import { IncidentTriggeredEvent } from '@app/kafka-topics/dtos/IncidentTriggered
 
 @Injectable()
 export class IngestServiceService {
+  private readonly logger = new Logger('IngestServiceService');
   constructor(
     @InjectRepository(Monitor)
     private readonly monitorRepo: Repository<Monitor>,
@@ -39,11 +40,12 @@ export class IngestServiceService {
    * @returns
    */
   async handleCheckCompletion(event: CheckExecutionCompletedEvent) {
+    this.logger.log('Received CheckExecutionCompletedEvent', event);
     const monitor = await this.monitorRepo.findOne({
       where: { id: event.Request.checkId, isActive: true, isLive: true },
-      relations: ['alertPolicy'],
+      relations: ['alertPolicy', 'project'],
     });
-
+    this.logger.log('Fetched monitor for CheckExecutionCompletedEvent', { monitorId: event.Request.checkId, monitor }); 
     if (!monitor) return;
 
     const success = this.isResponseValid(monitor, event);
@@ -72,12 +74,12 @@ export class IngestServiceService {
   async handleCheckFailure(event: CheckExecutionFailedEvent) {
     const monitor = await this.monitorRepo.findOne({
       where: { id: event.Request.checkId, isActive: true, isLive: true },
-      relations: ['alertPolicy'],
+      relations: ['alertPolicy', 'project'],
     });
 
     if (!monitor) return;
 
-    await this.storeFailureMetric(monitor);
+    await this.storeFailureMetric(monitor, event);
 
     const openIncident = await this.getOpenIncident(monitor.id);
 
@@ -116,17 +118,20 @@ export class IngestServiceService {
     event: CheckExecutionCompletedEvent,
     success: boolean,
   ) {
+    const timings = this.getMetricTimings(event.Response);
     const metric = this.metricRepo.create({
       monitor,
       isSuccess: success,
       statusCode: event.Response.status_code,
-      total_time_ms: event.Response.tdt,
-      dns_response_time_ms: event.Response.dns_lookup_end,
-      tcp_connection_time_ms: event.Response.tcp_end,
-      server_processing_time_ms: event.Response.server_processing_time,
-      tls_handshake_time_ms: event.Response.tls_end,
-      time_to_first_byte_ms: event.Response.ttfb,
-      content_transfer_time_ms: event.Response.server_processing_time,
+      durationMs: timings.total,
+      breakdown: timings.breakdown,
+      total_time_ms: timings.total,
+      dns_response_time_ms: timings.dns,
+      tcp_connection_time_ms: timings.tcp,
+      server_processing_time_ms: timings.processing,
+      tls_handshake_time_ms: timings.tls,
+      time_to_first_byte_ms: timings.firstByte,
+      content_transfer_time_ms: timings.transfer,
       region: event.region,
     });
 
@@ -137,14 +142,64 @@ export class IngestServiceService {
    * FAILURE METRIC STORAGE
    * @param monitor Monitor (libs/database)
    */
-  private async storeFailureMetric(monitor: Monitor) {
+  private async storeFailureMetric(
+    monitor: Monitor,
+    event: CheckExecutionFailedEvent,
+  ) {
+    const timings = this.getMetricTimings(event.Response.partial_timings);
     const metric = this.metricRepo.create({
       monitor,
       isSuccess: false,
-      region: 'IN',
+      statusCode: 0,
+      durationMs: timings.total,
+      breakdown: timings.breakdown,
+      dns_response_time_ms: timings.dns,
+      tcp_connection_time_ms: timings.tcp,
+      tls_handshake_time_ms: timings.tls,
+      time_to_first_byte_ms: timings.firstByte,
+      server_processing_time_ms: timings.processing,
+      content_transfer_time_ms: timings.transfer,
+      total_time_ms: timings.total,
+      region: event.region,
+      responseBody: event.Response.error_message,
     });
 
     await this.metricRepo.save(metric);
+  }
+
+  private getMetricTimings(
+    timings?: Partial<CheckExecutionCompletedEvent['Response']>,
+  ) {
+    const dns = Math.max(timings?.dns_lookup_end ?? 0, 0);
+    const tcpStart = Math.max(timings?.tcp_beginning_start ?? dns, 0);
+    const tcpEnd = Math.max(timings?.tcp_end ?? tcpStart, tcpStart);
+    const tlsStart = Math.max(timings?.tls_start ?? tcpEnd, tcpEnd);
+    const tlsEnd = Math.max(timings?.tls_end ?? tlsStart, tlsStart);
+    const ttfb = Math.max(timings?.ttfb ?? tlsEnd, tlsEnd);
+    const total = Math.max(timings?.tdt ?? ttfb, ttfb);
+    const processing = Math.max(timings?.server_processing_time ?? 0, 0);
+    const tcp = Math.max(tcpEnd - tcpStart, 0);
+    const tls = Math.max(tlsEnd - tlsStart, 0);
+    const firstByte = Math.max(ttfb - tlsEnd, 0);
+    const transfer = Math.max(total - ttfb, 0);
+
+    return {
+      dns,
+      tcp,
+      tls,
+      firstByte,
+      processing,
+      transfer,
+      total,
+      breakdown: {
+        dns,
+        tcp,
+        tls,
+        ttfb: firstByte,
+        spt: processing,
+        ctt: transfer,
+      },
+    };
   }
 
   /**
@@ -171,7 +226,12 @@ export class IngestServiceService {
       severity: IncidentSeverity.CRITICAL,
     });
     await this.incidentRepo.save(incident);
-    const alertPolicy = await this.alertPolicyRepo.findOne({ where: { id: monitor.alertPolicy?.id } });
+    const alertPolicy = monitor.alertPolicy?.id
+      ? await this.alertPolicyRepo.findOne({
+          where: { id: monitor.alertPolicy.id },
+          relations: ['notificationChannels'],
+        })
+      : null;
     await this.monitorRepo.update(monitor.id, { isLive: false });
     let message: IncidentTriggeredEvent = {
         title: `Incident for monitor ${monitor.name} : System Down`,

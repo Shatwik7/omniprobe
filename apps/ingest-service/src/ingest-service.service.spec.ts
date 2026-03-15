@@ -113,10 +113,30 @@ describe('IngestServiceService', () => {
 
       expect(monitorRepo.findOne).toHaveBeenCalledWith({
         where: { id: 'monitor-id', isActive: true, isLive: true },
-        relations: ['alertPolicy'],
+        relations: ['alertPolicy', 'project'],
       });
       expect(metricRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ isSuccess: true, statusCode: 200 }),
+        expect.objectContaining({
+          isSuccess: true,
+          statusCode: 200,
+          durationMs: 600,
+          total_time_ms: 600,
+          dns_response_time_ms: 700,
+          tcp_connection_time_ms: 100,
+          tls_handshake_time_ms: 100,
+          time_to_first_byte_ms: 100,
+          server_processing_time_ms: 50,
+          content_transfer_time_ms: 100,
+          region: 'IN',
+          breakdown: {
+            dns: 700,
+            tcp: 100,
+            tls: 100,
+            ttfb: 100,
+            spt: 50,
+            ctt: 100,
+          },
+        }),
       );
       expect(metricRepo.save).toHaveBeenCalledTimes(1);
       expect(incidentRepo.findOne).toHaveBeenCalledWith({
@@ -138,7 +158,11 @@ describe('IngestServiceService', () => {
       await service.handleCheckCompletion(badResponseEvent);
 
       expect(metricRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ isSuccess: false, statusCode: 500 }),
+        expect.objectContaining({
+          isSuccess: false,
+          statusCode: 500,
+          durationMs: 600,
+        }),
       );
       expect(metricRepo.save).toHaveBeenCalledTimes(1);
       expect(incidentRepo.create).toHaveBeenCalledWith({
@@ -167,7 +191,11 @@ describe('IngestServiceService', () => {
       await service.handleCheckCompletion(badResponseEvent);
 
       expect(metricRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ isSuccess: false, statusCode: 500 }),
+        expect.objectContaining({
+          isSuccess: false,
+          statusCode: 500,
+          durationMs: 600,
+        }),
       );
       expect(metricRepo.save).toHaveBeenCalledTimes(1);
       expect(incidentRepo.create).not.toHaveBeenCalled();
@@ -237,7 +265,25 @@ describe('IngestServiceService', () => {
       expect(metricRepo.create).toHaveBeenCalledWith({
         monitor: mockMonitor,
         isSuccess: false,
+        statusCode: 0,
+        durationMs: 0,
+        breakdown: {
+          dns: 0,
+          tcp: 0,
+          tls: 0,
+          ttfb: 0,
+          spt: 0,
+          ctt: 0,
+        },
+        dns_response_time_ms: 0,
+        tcp_connection_time_ms: 0,
+        tls_handshake_time_ms: 0,
+        time_to_first_byte_ms: 0,
+        server_processing_time_ms: 0,
+        content_transfer_time_ms: 0,
+        total_time_ms: 0,
         region: 'IN',
+        responseBody: 'Request timed out',
       });
       expect(metricRepo.save).toHaveBeenCalledTimes(1);
       expect(incidentRepo.create).toHaveBeenCalledWith({

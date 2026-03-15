@@ -17,9 +17,10 @@ import { DatabaseModule } from '@app/database';
         name: 'KAFKA_PRODUCER',
         transport: Transport.KAFKA,
         options: {
+          producerOnlyMode: true,
           client: {
             clientId: 'scheduler-producer',
-            brokers: ['localhost:9092'],
+            brokers: [process.env.KAFKA_URL || 'localhost:9092'],
             retry: {
               retries: 10,
               initialRetryTime: 1000,
