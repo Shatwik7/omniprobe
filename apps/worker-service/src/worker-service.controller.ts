@@ -1,5 +1,5 @@
 import { CheckExecutionRequestedEvent, Topics } from '@app/kafka-topics';
-import { Controller, Get, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Logger, ValidationPipe } from '@nestjs/common';
 import {
   EventPattern,
   Payload,
@@ -13,6 +13,7 @@ import { validate } from 'class-validator';
 
 @Controller()
 export class WorkerController {
+  private readonly logger:Logger=new Logger(WorkerController.name);
   constructor(
     private readonly EventProducer: CheckExecutionEventProducerService,
     private readonly Processor: CheckExecutorService,
@@ -22,17 +23,17 @@ export class WorkerController {
     @Payload() raw: any,
     @Ctx() context: KafkaContext,
   ) {
+    this.logger.log(`Received event on topic ${Topics.CHECK_EXECUTION_REQUESTED}: ${JSON.stringify(raw)}`);
     try {
       const dto = plainToInstance(CheckExecutionRequestedEvent, raw);
       const errors = await validate(dto);
-
       if (errors.length > 0) {
-        console.log('❌ Invalid message. Skipping.');
+        this.logger.error('❌ Invalid message. Skipping.');
         return;
       }
 
       const data = await this.Processor.collectHttpTimingMetrics(dto.url);
-      console.log(data);
+      this.logger.log(`Collected HTTP timing metrics: ${JSON.stringify(data)}`) ;
 
       if (data.success) {
         this.EventProducer.CheckCompleted({
@@ -48,7 +49,7 @@ export class WorkerController {
         });
       }
     } catch (e) {
-      console.error('Unexpected error:', e);
+      this.logger.error('Unexpected error:', e);
     }
   }
 }

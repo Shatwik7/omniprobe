@@ -11,26 +11,26 @@ import {
 export class CreateMonitorDto {
   @ApiProperty()
   @IsString()
-  name: string;
+  name!: string;
 
   @ApiProperty()
   @IsString()
   @IsUrl()
-  target: string;
+  target!: string;
 
   @ApiProperty()
   @IsString()
   @IsEnum(['GET', 'POST', 'PATCH', 'DELETE', 'PUT'])
-  method: string;
+  method!: string;
 
   @ApiProperty()
   @IsInt()
-  frequencySeconds: number;
+  frequencySeconds!: number;
 
   @ApiProperty()
   @IsString()
   @IsUUID()
-  projectId: string;
+  projectId!: string;
 
   @ApiProperty()
   @IsString()

@@ -65,11 +65,15 @@ export class NotificationServiceService {
       address: data.address,
       status: 'PENDING',
       alert_id: data.Alert,
-      project: {id:data.Project},
+      project: { id: data.Project },
     });
-    this.longPollingService.publishUpdate(`notification:${data.Project}`, notification).catch(err => {
-      this.logger.error(`Failed to publish notification update for project ${data.Project}: ${err.message}`);
-    });
+    this.longPollingService
+      .publishUpdate(`notification:${data.Project}`, notification)
+      .catch((err) => {
+        this.logger.error(
+          `Failed to publish notification update for project ${data.Project}: ${err.message}`,
+        );
+      });
     switch (data.channel) {
       case 'email':
         await this.emailService.send(data.address, data.title, data.message);
@@ -117,7 +121,7 @@ export class NotificationServiceService {
       address: data.address,
       status: 'PENDING',
       incident_id: data.Incident,
-      project: {id:data.Project},
+      project: { id: data.Project },
     });
     this.longPollingService.publishUpdate(`notification:${data.Project}`, notification).catch(err => {
       this.logger.error(`Failed to publish notification update for project ${data.Project}: ${err.message}`);

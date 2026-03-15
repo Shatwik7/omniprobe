@@ -31,6 +31,10 @@ describe('MonitorsController', () => {
           provide: MonitorsService,
           useValue: monitorsServiceMock,
         },
+        {
+          provide: 'KAFKA_PRODUCER',
+          useValue: { emit: jest.fn() },
+        }
       ],
     })
       .overrideGuard(JwtAuthGuard)

@@ -48,9 +48,9 @@ export class AnalyticsService {
     return this.analyticsRepository.save(analytics);
   }
 
-  findAllByMonitor(monitorId: string): Promise<Analytics[]> {
+  findAllByMonitor(monitorId: string, region?: string): Promise<Analytics[]> {
     return this.analyticsRepository.find({
-      where: { monitor: { id: monitorId } },
+      where: { monitor: { id: monitorId }, ...(region ? { region } : {}) },
       order: { createdAt: 'DESC' },
     });
   }

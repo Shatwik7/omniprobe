@@ -40,6 +40,10 @@ describe('Monitors Integration (controller + service + repository)', () => {
           provide: getRepositoryToken(Team),
           useValue: {},
         },
+        {
+          provide: 'KAFKA_PRODUCER',
+          useValue: { emit: jest.fn() },
+        }
       ],
     })
       .overrideGuard(JwtAuthGuard)

@@ -140,7 +140,7 @@ describe('AnalyticsController', () => {
         MONITOR_ID,
         PROJECT_ID,
       );
-      expect(analyticsService.findAllByMonitor).toHaveBeenCalledWith(MONITOR_ID);
+      expect(analyticsService.findAllByMonitor).toHaveBeenCalledWith(MONITOR_ID, undefined);
       expect(result).toEqual(list);
     });
 

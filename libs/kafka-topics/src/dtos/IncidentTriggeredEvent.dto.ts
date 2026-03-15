@@ -9,7 +9,7 @@ export class IncidentTriggeredEvent {
     message!: string;
 
     @IsString()
-    @IsEnum(['email', 'sms', 'slack'])
+    @IsEnum(['email', 'sms', 'slack', 'system'])
     channel!: string;
 
     @IsString()

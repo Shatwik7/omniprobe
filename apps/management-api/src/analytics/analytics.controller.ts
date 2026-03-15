@@ -50,13 +50,14 @@ export class AnalyticsController {
   async findAll(
     @Param('monitorId', ParseUUIDPipe) monitorId: string,
     @Param('projectId', ParseUUIDPipe) projectId: string,
+    @Query('region') region?: string,
   ) {
     if (await this.analyticsService.checkMonitorInProject(monitorId, projectId)) {
       throw new NotAcceptableException(
         'Monitor does not belong to the specified project',
       );
     }
-    return this.analyticsService.findAllByMonitor(monitorId);
+    return this.analyticsService.findAllByMonitor(monitorId, region);
   }
 
   @Get('poll')

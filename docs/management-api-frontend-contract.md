@@ -804,6 +804,21 @@ All monitor routes are guarded by both JWT auth and team membership.
   - `403 Forbidden`
 - What it does:
   - creates a monitor under a project
+  - publishes a Kafka event to scheduler after successful creation
+- Internal event side-effect:
+  - topic: `checks.execution.add`
+  - payload:
+
+```json
+{
+  "id": "<created-monitor-id>",
+  "frequency": 60
+}
+```
+
+Notes:
+
+- this is an internal async side-effect; the REST response remains the created `Monitor`
 
 ### `GET /teams/:teamId/projects/:projectId/monitors`
 
@@ -1413,3 +1428,2271 @@ These endpoints are currently scaffold or partially implemented and clients shou
 - Treat owner-only operations separately in the frontend UI
 - Build client polling for alerts, analytics, and metrics as timeout-and-retry loops
 - For notifications polling, expect `200` with `null` on timeout instead of `404`
+
+## Full Example REST Contract (Request/Response Bodies + API Calls)
+
+This section gives concrete API-call examples for every major REST resource.
+
+Use placeholders:
+
+- `{{BASE_URL}}` example: `http://localhost:3000`
+- `{{TOKEN}}` JWT from `/signin`
+- `{{TEAM_ID}}`, `{{PROJECT_ID}}`, `{{MONITOR_ID}}`, `{{ID}}` as UUIDs
+
+### 1) Authentication
+
+#### `POST /signup`
+
+Request:
+
+```bash
+curl -X POST "{{BASE_URL}}/signup" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Shatwik",
+    "email": "shatwik@example.com",
+    "password": "secret123"
+  }'
+```
+
+201 Response:
+
+```json
+{
+  "id": "a8deaa4c-1a1f-4f9d-aed2-8f7f22b9071b",
+  "name": "Shatwik",
+  "email": "shatwik@example.com",
+  "createdAt": "2026-03-14T10:00:00.000Z",
+  "updatedAt": "2026-03-14T10:00:00.000Z"
+}
+```
+
+#### `POST /signin`
+
+Request:
+
+```bash
+curl -X POST "{{BASE_URL}}/signin" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "shatwik@example.com",
+    "password": "secret123"
+  }'
+```
+
+201 Response:
+
+```json
+{
+  "access_token": "<jwt-token>"
+}
+```
+
+### 2) Teams
+
+#### `POST /teams`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Platform Team"}'
+```
+
+201 Response:
+
+```json
+{
+  "id": "{{TEAM_ID}}",
+  "name": "Platform Team",
+  "createdBy": {
+    "id": "b9d8a7f2-7c8d-4b96-82d1-cc601723d8a8",
+    "name": "Shatwik",
+    "email": "shatwik@example.com"
+  },
+  "members": [
+    {
+      "id": "b9d8a7f2-7c8d-4b96-82d1-cc601723d8a8",
+      "name": "Shatwik",
+      "email": "shatwik@example.com"
+    }
+  ],
+  "createdAt": "2026-03-14T10:01:00.000Z",
+  "updatedAt": "2026-03-14T10:01:00.000Z"
+}
+```
+
+#### `GET /teams`
+
+```bash
+curl -X GET "{{BASE_URL}}/teams" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+200 Response:
+
+```json
+{
+  "Teams": [
+    {
+      "id": "{{TEAM_ID}}",
+      "name": "Platform Team"
+    }
+  ],
+  "Count": 1
+}
+```
+
+#### `PUT /teams/:id/addUser`
+
+```bash
+curl -X PUT "{{BASE_URL}}/teams/{{TEAM_ID}}/addUser" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{"addUserId":"5f9f0d71-6900-4b0d-9b7d-c2ad567a27ca"}'
+```
+
+200 Response: updated `Team` object.
+
+### 3) Projects
+
+#### `POST /teams/:teamId/projects`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Checkout API",
+    "description":"Checkout service monitoring project"
+  }'
+```
+
+201 Response:
+
+```json
+{
+  "id": "{{PROJECT_ID}}",
+  "name": "Checkout API",
+  "description": "Checkout service monitoring project",
+  "createdAt": "2026-03-14T10:02:00.000Z",
+  "updatedAt": "2026-03-14T10:02:00.000Z"
+}
+```
+
+#### `GET /teams/:teamId/projects/:id`
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+200 Response: `Project`.
+
+### 4) Monitors
+
+#### `POST /teams/:teamId/projects/:projectId/monitors`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Homepage Health",
+    "target":"https://example.com/health",
+    "method":"GET",
+    "frequencySeconds":60,
+    "projectId":"{{PROJECT_ID}}",
+    "alertPolicyId":"0bc4f722-4a55-4f6e-9fc8-4f7de5ccce04"
+  }'
+```
+
+201 Response:
+
+```json
+{
+  "id": "{{MONITOR_ID}}",
+  "name": "Homepage Health",
+  "target": "https://example.com/health",
+  "method": "GET",
+  "frequencySeconds": 60,
+  "isLive": true,
+  "isActive": true,
+  "createdAt": "2026-03-14T10:03:00.000Z",
+  "updatedAt": "2026-03-14T10:03:00.000Z"
+}
+```
+
+Internal side effect (not in response):
+
+```json
+{
+  "topic": "checks.execution.add",
+  "payload": {
+    "id": "{{MONITOR_ID}}",
+    "frequency": 60
+  }
+}
+```
+
+#### `PATCH /teams/:teamId/projects/:projectId/monitors/:id`
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Homepage Health (Updated)","frequencySeconds":30}'
+```
+
+200 Response: updated `Monitor`.
+
+### 5) Metrics
+
+#### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/metrics" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "durationMs":120,
+    "statusCode":200,
+    "dns_response_time_ms":5,
+    "tcp_connection_time_ms":10,
+    "tls_handshake_time_ms":15,
+    "time_to_first_byte_ms":30,
+    "server_processing_time_ms":35,
+    "content_transfer_time_ms":25,
+    "total_time_ms":120,
+    "region":"IN",
+    "isSuccess":true,
+    "monitorId":"{{MONITOR_ID}}"
+  }'
+```
+
+201 Response:
+
+```json
+{
+  "id": "31f54c2b-e642-4d5e-bd70-88c30f6cb1fb",
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "statusCode": 200,
+  "total_time_ms": 120,
+  "region": "IN",
+  "isSuccess": true,
+  "createdAt": "2026-03-14T10:04:00.000Z"
+}
+```
+
+#### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics`
+
+```bash
+curl -G "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/metrics" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  --data-urlencode "beginDate=2026-03-14T00:00:00.000Z" \
+  --data-urlencode "endDate=2026-03-14T23:59:59.999Z" \
+  --data-urlencode "region=IN"
+```
+
+200 Response: `Metric[]`.
+
+### 6) Alerts
+
+#### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/alerts" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type":"ANOMALY",
+    "message":"Latency spike detected",
+    "metadata":{"p95":450,"threshold":300},
+    "monitorId":"{{MONITOR_ID}}"
+  }'
+```
+
+201 Response:
+
+```json
+{
+  "id": "41fc2d62-8891-4a3a-ad42-df7c891cb8e1",
+  "type": "ANOMALY",
+  "message": "Latency spike detected",
+  "metadata": {
+    "p95": 450,
+    "threshold": 300
+  },
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "createdAt": "2026-03-14T10:05:00.000Z",
+  "updatedAt": "2026-03-14T10:05:00.000Z"
+}
+```
+
+#### `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id`
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/alerts/{{ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+200 Response:
+
+```json
+{
+  "deleted": true
+}
+```
+
+### 7) Analytics
+
+#### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "monitorId":"{{MONITOR_ID}}",
+    "region":"IN",
+    "rollingAverage":120.5,
+    "rollingStdDev":15.2,
+    "variance":231.04,
+    "p95":180,
+    "p99":210,
+    "anomalyDetected":false,
+    "degradingComponent":null,
+    "networkRatio":0.4,
+    "backendRatio":0.6,
+    "forecast":{
+      "totalPrediction":[125,130],
+      "confidenceUpper":[140,145],
+      "confidenceLower":[110,115]
+    },
+    "predictedSlaBreach":false,
+    "errorRate":0.02,
+    "trend":"stable",
+    "recentMetrics":[]
+  }'
+```
+
+201 Response: `Analytics`.
+
+#### `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/availability`
+
+```bash
+curl -G "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics/availability" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  --data-urlencode "startTime=2026-03-14T00:00:00.000Z" \
+  --data-urlencode "endTime=2026-03-14T23:59:59.999Z"
+```
+
+200 Response:
+
+```json
+{
+  "availability": 99.97,
+  "downtime": 30000
+}
+```
+
+### 8) Incidents
+
+#### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status":"OPEN",
+    "severity":"CRITICAL",
+    "summary":"Service unreachable",
+    "monitorId":"{{MONITOR_ID}}",
+    "notifications":["email:oncall@example.com"]
+  }'
+```
+
+201 Response: `Incident`.
+
+#### `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/acknowledge`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents/{{ID}}/acknowledge" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"b9d8a7f2-7c8d-4b96-82d1-cc601723d8a8"}'
+```
+
+200 Response: TypeORM update result object.
+
+### 9) Notifications
+
+#### `POST /teams/:teamId/projects/:projectId/notifications`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel":"SLACK",
+    "address":"#ops-alerts",
+    "status":"PENDING",
+    "incidentId":"c1bc30d9-08df-4f0b-aa66-9e495d729f0d",
+    "alertId":"f5db8f9f-995e-4a66-9ef8-c69d287fa774",
+    "message":"Incident opened for Homepage Health",
+    "title":"Incident Triggered",
+    "projectId":"{{PROJECT_ID}}"
+  }'
+```
+
+201 Response: `Notification`.
+
+#### `GET /teams/:teamId/projects/:projectId/notifications/poll`
+
+```bash
+curl -G "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications/poll" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  --data-urlencode "timeout=30000"
+```
+
+200 Response:
+
+```json
+null
+```
+
+or a full `Notification` object when an event is available.
+
+### 10) Alert Policy
+
+#### `POST /teams/:teamId/projects/:projectId/alert-policy`
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/alert-policy" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Latency + Availability Policy",
+    "rules":{
+      "version":"1.0",
+      "rules":[
+        {
+          "metric":"p95",
+          "operator":">",
+          "threshold":300,
+          "window":"5m"
+        }
+      ],
+      "logic":"AND",
+      "actions":["create_incident"],
+      "suppression":{
+        "cooldown":"15m",
+        "maintenance":[
+          {
+            "start":"2026-03-20T00:00:00.000Z",
+            "end":"2026-03-20T02:00:00.000Z"
+          }
+        ]
+      }
+    },
+    "notificationChannels":[
+      {
+        "channelType":"slack",
+        "address":"#ops-alerts"
+      },
+      {
+        "channelType":"email",
+        "address":"oncall@example.com"
+      }
+    ]
+  }'
+```
+
+201 Response: `AlertPolicy`.
+
+## Complete Endpoint Inventory
+
+All endpoints currently exposed by Management API:
+
+- `POST /signup`
+- `POST /signin`
+- `GET /`
+- `GET /users/search`
+- `GET /me`
+- `GET /users/:id`
+- `PATCH /users/:id`
+- `DELETE /users/:id`
+- `POST /teams`
+- `GET /teams`
+- `GET /teams/:id`
+- `PUT /teams/:id/addUser`
+- `DELETE /teams/:id`
+- `POST /teams/:teamId/projects`
+- `GET /teams/:teamId/projects`
+- `GET /teams/:teamId/projects/:id`
+- `PATCH /teams/:teamId/projects/:id`
+- `DELETE /teams/:teamId/projects/:id`
+- `POST /teams/:teamId/projects/:projectId/monitors`
+- `GET /teams/:teamId/projects/:projectId/monitors`
+- `GET /teams/:teamId/projects/:projectId/monitors/:id`
+- `PATCH /teams/:teamId/projects/:projectId/monitors/:id`
+- `DELETE /teams/:teamId/projects/:projectId/monitors/:id`
+- `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/poll`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id`
+- `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id`
+- `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id`
+- `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/poll`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id`
+- `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id`
+- `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id`
+- `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/poll`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/availability`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id`
+- `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id`
+- `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id`
+- `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents`
+- `GET /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id`
+- `PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id`
+- `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/acknowledge`
+- `POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/resolve`
+- `DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id`
+- `POST /teams/:teamId/projects/:projectId/notifications`
+- `GET /teams/:teamId/projects/:projectId/notifications/by-team/:teamIdParam`
+- `GET /teams/:teamId/projects/:projectId/notifications/poll`
+- `GET /teams/:teamId/projects/:projectId/notifications`
+- `GET /teams/:teamId/projects/:projectId/notifications/:id`
+- `PATCH /teams/:teamId/projects/:projectId/notifications/:id`
+- `DELETE /teams/:teamId/projects/:projectId/notifications/:id`
+- `POST /teams/:teamId/projects/:projectId/alert-policy`
+- `GET /teams/:teamId/projects/:projectId/alert-policy`
+- `GET /teams/:teamId/projects/:projectId/alert-policy/:id`
+- `PATCH /teams/:teamId/projects/:projectId/alert-policy/:id`
+- `DELETE /teams/:teamId/projects/:projectId/alert-policy/:id`
+
+## Endpoint-By-Endpoint API Examples (All Endpoints)
+
+Use these placeholders in all examples:
+
+- `{{BASE_URL}}` = `http://localhost:3000`
+- `{{TOKEN}}` = JWT from `/signin`
+- `{{USER_ID}}`, `{{TEAM_ID}}`, `{{PROJECT_ID}}`, `{{MONITOR_ID}}`, `{{METRIC_ID}}`, `{{ALERT_ID}}`, `{{ANALYTICS_ID}}`, `{{INCIDENT_ID}}`, `{{NOTIFICATION_ID}}`, `{{ALERT_POLICY_ID}}` = UUIDs
+
+### Users + Auth
+
+#### POST /signup
+
+```bash
+curl -X POST "{{BASE_URL}}/signup" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Shatwik",
+    "email": "shatwik@example.com",
+    "password": "secret123"
+  }'
+```
+
+```json
+{
+  "id": "{{USER_ID}}",
+  "name": "Shatwik",
+  "email": "shatwik@example.com",
+  "createdAt": "2026-03-14T10:00:00.000Z",
+  "updatedAt": "2026-03-14T10:00:00.000Z"
+}
+```
+
+#### POST /signin
+
+```bash
+curl -X POST "{{BASE_URL}}/signin" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "shatwik@example.com",
+    "password": "secret123"
+  }'
+```
+
+```json
+{
+  "access_token": "{{TOKEN}}"
+}
+```
+
+#### GET /
+
+```bash
+curl -X GET "{{BASE_URL}}/?take=10&skip=0"
+```
+
+```json
+[
+  {
+    "id": "{{USER_ID}}",
+    "name": "Shatwik",
+    "email": "shatwik@example.com",
+    "createdAt": "2026-03-14T10:00:00.000Z",
+    "updatedAt": "2026-03-14T10:00:00.000Z"
+  }
+]
+```
+
+#### GET /users/search
+
+```bash
+curl -X GET "{{BASE_URL}}/users/search?name=sha&email=example.com"
+```
+
+```json
+[
+  {
+    "id": "{{USER_ID}}",
+    "name": "Shatwik",
+    "email": "shatwik@example.com",
+    "createdAt": "2026-03-14T10:00:00.000Z",
+    "updatedAt": "2026-03-14T10:00:00.000Z"
+  }
+]
+```
+
+#### GET /me
+
+```bash
+curl -X GET "{{BASE_URL}}/me" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{USER_ID}}",
+  "name": "Shatwik",
+  "email": "shatwik@example.com",
+  "createdAt": "2026-03-14T10:00:00.000Z",
+  "updatedAt": "2026-03-14T10:00:00.000Z"
+}
+```
+
+#### GET /users/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/users/{{USER_ID}}"
+```
+
+```json
+{
+  "id": "{{USER_ID}}",
+  "name": "Shatwik",
+  "email": "shatwik@example.com",
+  "createdAt": "2026-03-14T10:00:00.000Z",
+  "updatedAt": "2026-03-14T10:00:00.000Z"
+}
+```
+
+#### PATCH /users/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/users/{{USER_ID}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Shatwik Updated",
+    "email": "shatwik.updated@example.com",
+    "password": "newsecret123"
+  }'
+```
+
+```json
+"This action updates a #{{USER_ID}} user"
+```
+
+#### DELETE /users/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/users/{{USER_ID}}"
+```
+
+```json
+true
+```
+
+### Teams
+
+#### POST /teams
+
+```bash
+curl -X POST "{{BASE_URL}}/teams" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Platform Team"}'
+```
+
+```json
+{
+  "id": "{{TEAM_ID}}",
+  "name": "Platform Team",
+  "createdBy": {
+    "id": "{{USER_ID}}",
+    "name": "Shatwik",
+    "email": "shatwik@example.com"
+  },
+  "members": [
+    {
+      "id": "{{USER_ID}}",
+      "name": "Shatwik",
+      "email": "shatwik@example.com"
+    }
+  ],
+  "createdAt": "2026-03-14T10:01:00.000Z",
+  "updatedAt": "2026-03-14T10:01:00.000Z"
+}
+```
+
+#### GET /teams
+
+```bash
+curl -X GET "{{BASE_URL}}/teams" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "Teams": [
+    {
+      "id": "{{TEAM_ID}}",
+      "name": "Platform Team",
+      "createdBy": {
+        "id": "{{USER_ID}}",
+        "name": "Shatwik",
+        "email": "shatwik@example.com"
+      },
+      "members": [
+        {
+          "id": "{{USER_ID}}",
+          "name": "Shatwik",
+          "email": "shatwik@example.com"
+        }
+      ]
+    }
+  ],
+  "Count": 1
+}
+```
+
+#### GET /teams/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{TEAM_ID}}",
+  "name": "Platform Team",
+  "createdBy": {
+    "id": "{{USER_ID}}",
+    "name": "Shatwik",
+    "email": "shatwik@example.com"
+  },
+  "members": [
+    {
+      "id": "{{USER_ID}}",
+      "name": "Shatwik",
+      "email": "shatwik@example.com"
+    }
+  ],
+  "createdAt": "2026-03-14T10:01:00.000Z",
+  "updatedAt": "2026-03-14T10:01:00.000Z"
+}
+```
+
+#### PUT /teams/:id/addUser
+
+```bash
+curl -X PUT "{{BASE_URL}}/teams/{{TEAM_ID}}/addUser" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Platform Team",
+    "addUserId": "4f2e6e6c-62f6-4f74-97d9-b2e2f0f5e5d9"
+  }'
+```
+
+```json
+{
+  "id": "{{TEAM_ID}}",
+  "name": "Platform Team",
+  "createdBy": {
+    "id": "{{USER_ID}}"
+  },
+  "members": [
+    {
+      "id": "{{USER_ID}}",
+      "name": "Shatwik",
+      "email": "shatwik@example.com"
+    },
+    {
+      "id": "4f2e6e6c-62f6-4f74-97d9-b2e2f0f5e5d9",
+      "name": "SRE User",
+      "email": "sre@example.com"
+    }
+  ],
+  "updatedAt": "2026-03-14T10:05:00.000Z"
+}
+```
+
+#### DELETE /teams/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+true
+```
+
+### Projects
+
+#### POST /teams/:teamId/projects
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Checkout API",
+    "description":"Checkout service monitoring project"
+  }'
+```
+
+```json
+{
+  "id": "{{PROJECT_ID}}",
+  "name": "Checkout API",
+  "description": "Checkout service monitoring project",
+  "createdAt": "2026-03-14T10:02:00.000Z",
+  "updatedAt": "2026-03-14T10:02:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+[
+  {
+    "id": "{{PROJECT_ID}}",
+    "name": "Checkout API",
+    "description": "Checkout service monitoring project",
+    "createdAt": "2026-03-14T10:02:00.000Z",
+    "updatedAt": "2026-03-14T10:02:00.000Z"
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{PROJECT_ID}}",
+  "name": "Checkout API",
+  "description": "Checkout service monitoring project",
+  "createdAt": "2026-03-14T10:02:00.000Z",
+  "updatedAt": "2026-03-14T10:02:00.000Z"
+}
+```
+
+#### PATCH /teams/:teamId/projects/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Checkout API Updated",
+    "description":"Updated description"
+  }'
+```
+
+```json
+"This action updates a #{{PROJECT_ID}} project"
+```
+
+#### DELETE /teams/:teamId/projects/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+true
+```
+
+### Monitors
+
+#### POST /teams/:teamId/projects/:projectId/monitors
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Homepage Health",
+    "target":"https://example.com/health",
+    "method":"GET",
+    "frequencySeconds":60,
+    "projectId":"{{PROJECT_ID}}",
+    "alertPolicyId":"{{ALERT_POLICY_ID}}"
+  }'
+```
+
+```json
+{
+  "id": "{{MONITOR_ID}}",
+  "name": "Homepage Health",
+  "target": "https://example.com/health",
+  "method": "GET",
+  "frequencySeconds": 60,
+  "isLive": true,
+  "isActive": true,
+  "headers": {},
+  "body": "",
+  "maintencePeriods": [],
+  "expectedStatus": 200,
+  "expectedBody": null,
+  "createdAt": "2026-03-14T10:03:00.000Z",
+  "updatedAt": "2026-03-14T10:03:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+[
+  {
+    "id": "{{MONITOR_ID}}",
+    "name": "Homepage Health",
+    "target": "https://example.com/health",
+    "method": "GET",
+    "frequencySeconds": 60,
+    "isLive": true,
+    "isActive": true,
+    "createdAt": "2026-03-14T10:03:00.000Z"
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{MONITOR_ID}}",
+  "name": "Homepage Health",
+  "target": "https://example.com/health",
+  "method": "GET",
+  "frequencySeconds": 60,
+  "isLive": true,
+  "isActive": true,
+  "project": {
+    "id": "{{PROJECT_ID}}",
+    "name": "Checkout API"
+  },
+  "alertPolicy": {
+    "id": "{{ALERT_POLICY_ID}}",
+    "name": "Latency + Availability Policy",
+    "rules": {
+      "version": "1.0",
+      "rules": [],
+      "logic": "AND",
+      "actions": []
+    },
+    "notificationChannels": []
+  },
+  "createdAt": "2026-03-14T10:03:00.000Z"
+}
+```
+
+#### PATCH /teams/:teamId/projects/:projectId/monitors/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Homepage Health Updated",
+    "target":"https://example.com/status",
+    "method":"GET",
+    "frequencySeconds":30,
+    "projectId":"{{PROJECT_ID}}",
+    "alertPolicyId":"{{ALERT_POLICY_ID}}"
+  }'
+```
+
+```json
+{
+  "id": "{{MONITOR_ID}}",
+  "name": "Homepage Health Updated",
+  "target": "https://example.com/status",
+  "method": "GET",
+  "frequencySeconds": 30,
+  "isLive": true,
+  "isActive": true,
+  "updatedAt": "2026-03-14T10:04:00.000Z"
+}
+```
+
+#### DELETE /teams/:teamId/projects/:projectId/monitors/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+true
+```
+
+### Metrics
+
+#### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/metrics" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "durationMs":120,
+    "statusCode":200,
+    "dns_response_time_ms":5,
+    "tcp_connection_time_ms":10,
+    "tls_handshake_time_ms":15,
+    "time_to_first_byte_ms":30,
+    "server_processing_time_ms":35,
+    "content_transfer_time_ms":25,
+    "total_time_ms":120,
+    "region":"IN",
+    "isSuccess":true,
+    "monitorId":"{{MONITOR_ID}}"
+  }'
+```
+
+```json
+{
+  "id": "{{METRIC_ID}}",
+  "durationMs": 120,
+  "statusCode": 200,
+  "dns_response_time_ms": 5,
+  "tcp_connection_time_ms": 10,
+  "tls_handshake_time_ms": 15,
+  "time_to_first_byte_ms": 30,
+  "server_processing_time_ms": 35,
+  "content_transfer_time_ms": 25,
+  "total_time_ms": 120,
+  "region": "IN",
+  "isSuccess": true,
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "createdAt": "2026-03-14T10:06:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics
+
+```bash
+curl -G "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/metrics" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  --data-urlencode "beginDate=2026-03-14T00:00:00.000Z" \
+  --data-urlencode "endDate=2026-03-14T23:59:59.999Z" \
+  --data-urlencode "region=IN"
+```
+
+```json
+[
+  {
+    "id": "{{METRIC_ID}}",
+    "durationMs": 120,
+    "statusCode": 200,
+    "total_time_ms": 120,
+    "region": "IN",
+    "isSuccess": true,
+    "monitor": {
+      "id": "{{MONITOR_ID}}"
+    },
+    "createdAt": "2026-03-14T10:06:00.000Z"
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/poll
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/metrics/poll" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{METRIC_ID}}",
+  "durationMs": 120,
+  "statusCode": 200,
+  "total_time_ms": 120,
+  "region": "IN",
+  "isSuccess": true,
+  "monitorId": "{{MONITOR_ID}}"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/metrics/{{METRIC_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{METRIC_ID}}",
+  "durationMs": 120,
+  "statusCode": 200,
+  "dns_response_time_ms": 5,
+  "tcp_connection_time_ms": 10,
+  "tls_handshake_time_ms": 15,
+  "time_to_first_byte_ms": 30,
+  "server_processing_time_ms": 35,
+  "content_transfer_time_ms": 25,
+  "total_time_ms": 120,
+  "region": "IN",
+  "isSuccess": true,
+  "createdAt": "2026-03-14T10:06:00.000Z"
+}
+```
+
+#### PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/metrics/{{METRIC_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "durationMs":100,
+    "statusCode":200,
+    "dns_response_time_ms":3,
+    "tcp_connection_time_ms":8,
+    "tls_handshake_time_ms":10,
+    "time_to_first_byte_ms":25,
+    "server_processing_time_ms":30,
+    "content_transfer_time_ms":24,
+    "total_time_ms":100,
+    "region":"IN",
+    "isSuccess":true,
+    "monitorId":"{{MONITOR_ID}}"
+  }'
+```
+
+```json
+{
+  "id": "{{METRIC_ID}}",
+  "durationMs": 100,
+  "statusCode": 200,
+  "total_time_ms": 100,
+  "region": "IN",
+  "isSuccess": true,
+  "updatedAt": "2026-03-14T10:07:00.000Z"
+}
+```
+
+#### DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/metrics/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/metrics/{{METRIC_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+true
+```
+
+### Alerts
+
+#### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/alerts" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type":"ANOMALY",
+    "message":"Latency spike detected",
+    "metadata":{"p95":450,"threshold":300},
+    "monitorId":"{{MONITOR_ID}}",
+    "metricId":"{{METRIC_ID}}"
+  }'
+```
+
+```json
+{
+  "id": "{{ALERT_ID}}",
+  "type": "ANOMALY",
+  "message": "Latency spike detected",
+  "metadata": {
+    "p95": 450,
+    "threshold": 300
+  },
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "metric": {
+    "id": "{{METRIC_ID}}"
+  },
+  "createdAt": "2026-03-14T10:08:00.000Z",
+  "updatedAt": "2026-03-14T10:08:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/alerts" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+[
+  {
+    "id": "{{ALERT_ID}}",
+    "type": "ANOMALY",
+    "message": "Latency spike detected",
+    "metadata": {
+      "p95": 450,
+      "threshold": 300
+    },
+    "monitor": {
+      "id": "{{MONITOR_ID}}"
+    },
+    "metric": {
+      "id": "{{METRIC_ID}}"
+    },
+    "createdAt": "2026-03-14T10:08:00.000Z"
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/poll
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/alerts/poll" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{ALERT_ID}}",
+  "type": "ANOMALY",
+  "message": "Latency spike detected",
+  "metadata": {
+    "p95": 450,
+    "threshold": 300
+  },
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "metric": {
+    "id": "{{METRIC_ID}}"
+  }
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/alerts/{{ALERT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{ALERT_ID}}",
+  "type": "ANOMALY",
+  "message": "Latency spike detected",
+  "metadata": {
+    "p95": 450,
+    "threshold": 300
+  },
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "metric": {
+    "id": "{{METRIC_ID}}"
+  },
+  "createdAt": "2026-03-14T10:08:00.000Z",
+  "updatedAt": "2026-03-14T10:08:00.000Z"
+}
+```
+
+#### PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/alerts/{{ALERT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type":"ANOMALY",
+    "message":"Latency recovered",
+    "metadata":{"p95":210,"threshold":300},
+    "monitorId":"{{MONITOR_ID}}",
+    "metricId":"{{METRIC_ID}}"
+  }'
+```
+
+```json
+{
+  "id": "{{ALERT_ID}}",
+  "type": "ANOMALY",
+  "message": "Latency recovered",
+  "metadata": {
+    "p95": 210,
+    "threshold": 300
+  },
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "metric": {
+    "id": "{{METRIC_ID}}"
+  },
+  "updatedAt": "2026-03-14T10:09:00.000Z"
+}
+```
+
+#### DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/alerts/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/alerts/{{ALERT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "deleted": true
+}
+```
+
+### Analytics
+
+#### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "monitorId":"{{MONITOR_ID}}",
+    "region":"IN",
+    "rollingAverage":120.5,
+    "rollingStdDev":15.2,
+    "variance":231.04,
+    "p95":180,
+    "p99":210,
+    "anomalyDetected":false,
+    "degradingComponent":null,
+    "networkRatio":0.4,
+    "backendRatio":0.6,
+    "forecast":{
+      "totalPrediction":[125,130],
+      "confidenceUpper":[140,145],
+      "confidenceLower":[110,115]
+    },
+    "predictedSlaBreach":false,
+    "errorRate":0.02,
+    "trend":"stable",
+    "recentMetrics":[]
+  }'
+```
+
+```json
+{
+  "id": "{{ANALYTICS_ID}}",
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "region": "IN",
+  "rollingAverage": 120.5,
+  "rollingStdDev": 15.2,
+  "variance": 231.04,
+  "p95": 180,
+  "p99": 210,
+  "anomalyDetected": false,
+  "degradingComponent": null,
+  "networkRatio": 0.4,
+  "backendRatio": 0.6,
+  "forecast": {
+    "totalPrediction": [125, 130],
+    "confidenceUpper": [140, 145],
+    "confidenceLower": [110, 115]
+  },
+  "predictedSlaBreach": false,
+  "errorRate": 0.02,
+  "trend": "stable",
+  "recentMetrics": [],
+  "createdAt": "2026-03-14T10:10:00.000Z",
+  "updatedAt": "2026-03-14T10:10:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics?region=IN" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+[
+  {
+    "id": "{{ANALYTICS_ID}}",
+    "monitor": {
+      "id": "{{MONITOR_ID}}"
+    },
+    "region": "IN",
+    "rollingAverage": 120.5,
+    "rollingStdDev": 15.2,
+    "variance": 231.04,
+    "p95": 180,
+    "p99": 210,
+    "anomalyDetected": false,
+    "networkRatio": 0.4,
+    "backendRatio": 0.6,
+    "forecast": {
+      "totalPrediction": [125, 130],
+      "confidenceUpper": [140, 145],
+      "confidenceLower": [110, 115]
+    },
+    "predictedSlaBreach": false,
+    "errorRate": 0.02,
+    "trend": "stable",
+    "recentMetrics": []
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/poll
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics/poll" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{ANALYTICS_ID}}",
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "region": "IN",
+  "rollingAverage": 120.5,
+  "rollingStdDev": 15.2,
+  "variance": 231.04,
+  "p95": 180,
+  "p99": 210,
+  "anomalyDetected": false,
+  "degradingComponent": null,
+  "networkRatio": 0.4,
+  "backendRatio": 0.6,
+  "forecast": {
+    "totalPrediction": [125, 130],
+    "confidenceUpper": [140, 145],
+    "confidenceLower": [110, 115]
+  },
+  "predictedSlaBreach": false,
+  "errorRate": 0.02,
+  "trend": "stable",
+  "recentMetrics": []
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/availability
+
+```bash
+curl -G "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics/availability" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  --data-urlencode "startTime=2026-03-14T00:00:00.000Z" \
+  --data-urlencode "endTime=2026-03-14T23:59:59.999Z"
+```
+
+```json
+{
+  "availability": 99.97,
+  "downtime": 30000
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics/{{ANALYTICS_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{ANALYTICS_ID}}",
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "region": "IN",
+  "rollingAverage": 120.5,
+  "rollingStdDev": 15.2,
+  "variance": 231.04,
+  "p95": 180,
+  "p99": 210,
+  "anomalyDetected": false,
+  "degradingComponent": null,
+  "networkRatio": 0.4,
+  "backendRatio": 0.6,
+  "forecast": {
+    "totalPrediction": [125, 130],
+    "confidenceUpper": [140, 145],
+    "confidenceLower": [110, 115]
+  },
+  "predictedSlaBreach": false,
+  "errorRate": 0.02,
+  "trend": "stable",
+  "recentMetrics": [],
+  "createdAt": "2026-03-14T10:10:00.000Z",
+  "updatedAt": "2026-03-14T10:10:00.000Z"
+}
+```
+
+#### PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics/{{ANALYTICS_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "monitorId":"{{MONITOR_ID}}",
+    "region":"IN",
+    "rollingAverage":118.2,
+    "rollingStdDev":14.5,
+    "variance":210.25,
+    "p95":170,
+    "p99":198,
+    "anomalyDetected":false,
+    "degradingComponent":null,
+    "networkRatio":0.38,
+    "backendRatio":0.62,
+    "forecast":{
+      "totalPrediction":[120,124],
+      "confidenceUpper":[132,137],
+      "confidenceLower":[108,111]
+    },
+    "predictedSlaBreach":false,
+    "errorRate":0.01,
+    "trend":"improving",
+    "recentMetrics":[]
+  }'
+```
+
+```json
+{
+  "id": "{{ANALYTICS_ID}}",
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "region": "IN",
+  "rollingAverage": 118.2,
+  "rollingStdDev": 14.5,
+  "variance": 210.25,
+  "p95": 170,
+  "p99": 198,
+  "anomalyDetected": false,
+  "degradingComponent": null,
+  "networkRatio": 0.38,
+  "backendRatio": 0.62,
+  "forecast": {
+    "totalPrediction": [120, 124],
+    "confidenceUpper": [132, 137],
+    "confidenceLower": [108, 111]
+  },
+  "predictedSlaBreach": false,
+  "errorRate": 0.01,
+  "trend": "improving",
+  "recentMetrics": [],
+  "updatedAt": "2026-03-14T10:11:00.000Z"
+}
+```
+
+#### DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/analytics/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/analytics/{{ANALYTICS_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "deleted": true
+}
+```
+
+### Incidents
+
+#### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status":"OPEN",
+    "severity":"CRITICAL",
+    "summary":"Service unreachable",
+    "resolvedAt": null,
+    "acknowledgedAt": null,
+    "startedAt":"2026-03-14T10:12:00.000Z",
+    "acknowledgedBy": "{{USER_ID}}",
+    "monitorId":"{{MONITOR_ID}}",
+    "notifications":["email:oncall@example.com","slack:#ops-alerts"]
+  }'
+```
+
+```json
+{
+  "id": "{{INCIDENT_ID}}",
+  "status": "OPEN",
+  "severity": "CRITICAL",
+  "summary": "Service unreachable",
+  "resolvedAt": null,
+  "acknowledgedAt": null,
+  "startedAt": "2026-03-14T10:12:00.000Z",
+  "acknowledgedBy": {
+    "id": "{{USER_ID}}"
+  },
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  },
+  "updatedAt": "2026-03-14T10:12:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+[
+  {
+    "id": "{{INCIDENT_ID}}",
+    "status": "OPEN",
+    "severity": "CRITICAL",
+    "summary": "Service unreachable",
+    "resolvedAt": null,
+    "acknowledgedAt": null,
+    "startedAt": "2026-03-14T10:12:00.000Z",
+    "monitor": {
+      "id": "{{MONITOR_ID}}"
+    }
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents/{{INCIDENT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{INCIDENT_ID}}",
+  "status": "OPEN",
+  "severity": "CRITICAL",
+  "summary": "Service unreachable",
+  "resolvedAt": null,
+  "acknowledgedAt": null,
+  "startedAt": "2026-03-14T10:12:00.000Z",
+  "acknowledgedBy": {
+    "id": "{{USER_ID}}"
+  },
+  "monitor": {
+    "id": "{{MONITOR_ID}}"
+  }
+}
+```
+
+#### PATCH /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents/{{INCIDENT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status":"ACKNOWLEDGED",
+    "severity":"WARNING",
+    "summary":"Investigating",
+    "resolvedAt": null,
+    "acknowledgedAt":"2026-03-14T10:13:00.000Z",
+    "startedAt":"2026-03-14T10:12:00.000Z",
+    "acknowledgedBy":"{{USER_ID}}",
+    "monitorId":"{{MONITOR_ID}}",
+    "notifications":["email:oncall@example.com"]
+  }'
+```
+
+```json
+"This action updates a #{{INCIDENT_ID}} incident"
+```
+
+#### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/acknowledge
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents/{{INCIDENT_ID}}/acknowledge" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"{{USER_ID}}"}'
+```
+
+```json
+{
+  "generatedMaps": [],
+  "raw": [],
+  "affected": 1
+}
+```
+
+#### POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id/resolve
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents/{{INCIDENT_ID}}/resolve" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "generatedMaps": [],
+  "raw": [],
+  "affected": 1
+}
+```
+
+#### DELETE /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/monitors/{{MONITOR_ID}}/incidents/{{INCIDENT_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+true
+```
+
+### Notifications
+
+#### POST /teams/:teamId/projects/:projectId/notifications
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel":"SLACK",
+    "address":"#ops-alerts",
+    "status":"PENDING",
+    "incidentId":"{{INCIDENT_ID}}",
+    "alertId":"{{ALERT_ID}}",
+    "message":"Incident opened",
+    "title":"Incident Triggered",
+    "projectId":"{{PROJECT_ID}}"
+  }'
+```
+
+```json
+{
+  "id": "{{NOTIFICATION_ID}}",
+  "channel": "SLACK",
+  "address": "#ops-alerts",
+  "status": "PENDING",
+  "incident": {
+    "id": "{{INCIDENT_ID}}"
+  },
+  "alert": {
+    "id": "{{ALERT_ID}}"
+  },
+  "message": "Incident opened",
+  "title": "Incident Triggered",
+  "sentAt": null,
+  "createdAt": "2026-03-14T10:14:00.000Z",
+  "updatedAt": "2026-03-14T10:14:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/notifications/by-team/:teamIdParam
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications/by-team/{{TEAM_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+[
+  {
+    "id": "{{NOTIFICATION_ID}}",
+    "channel": "SLACK",
+    "address": "#ops-alerts",
+    "status": "PENDING",
+    "message": "Incident opened",
+    "title": "Incident Triggered",
+    "sentAt": null,
+    "createdAt": "2026-03-14T10:14:00.000Z",
+    "updatedAt": "2026-03-14T10:14:00.000Z"
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:projectId/notifications/poll
+
+```bash
+curl -G "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications/poll" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  --data-urlencode "timeout=30000"
+```
+
+```json
+{
+  "id": "{{NOTIFICATION_ID}}",
+  "channel": "SLACK",
+  "address": "#ops-alerts",
+  "status": "PENDING",
+  "incident": {
+    "id": "{{INCIDENT_ID}}"
+  },
+  "alert": {
+    "id": "{{ALERT_ID}}"
+  },
+  "message": "Incident opened",
+  "title": "Incident Triggered",
+  "sentAt": null,
+  "createdAt": "2026-03-14T10:14:00.000Z",
+  "updatedAt": "2026-03-14T10:14:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/notifications
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+[
+  {
+    "id": "{{NOTIFICATION_ID}}",
+    "channel": "SLACK",
+    "address": "#ops-alerts",
+    "status": "PENDING",
+    "incident": {
+      "id": "{{INCIDENT_ID}}"
+    },
+    "alert": {
+      "id": "{{ALERT_ID}}"
+    },
+    "message": "Incident opened",
+    "title": "Incident Triggered",
+    "sentAt": null,
+    "createdAt": "2026-03-14T10:14:00.000Z",
+    "updatedAt": "2026-03-14T10:14:00.000Z"
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:projectId/notifications/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications/{{NOTIFICATION_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{NOTIFICATION_ID}}",
+  "channel": "SLACK",
+  "address": "#ops-alerts",
+  "status": "PENDING",
+  "incident": {
+    "id": "{{INCIDENT_ID}}"
+  },
+  "alert": {
+    "id": "{{ALERT_ID}}"
+  },
+  "message": "Incident opened",
+  "title": "Incident Triggered",
+  "sentAt": null,
+  "createdAt": "2026-03-14T10:14:00.000Z",
+  "updatedAt": "2026-03-14T10:14:00.000Z"
+}
+```
+
+#### PATCH /teams/:teamId/projects/:projectId/notifications/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications/{{NOTIFICATION_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel":"SLACK",
+    "address":"#ops-alerts",
+    "status":"SENT",
+    "incidentId":"{{INCIDENT_ID}}",
+    "alertId":"{{ALERT_ID}}",
+    "message":"Incident acknowledged",
+    "title":"Incident Update",
+    "projectId":"{{PROJECT_ID}}"
+  }'
+```
+
+```json
+{
+  "id": "{{NOTIFICATION_ID}}",
+  "channel": "SLACK",
+  "address": "#ops-alerts",
+  "status": "SENT",
+  "incident": {
+    "id": "{{INCIDENT_ID}}"
+  },
+  "alert": {
+    "id": "{{ALERT_ID}}"
+  },
+  "message": "Incident acknowledged",
+  "title": "Incident Update",
+  "sentAt": "2026-03-14T10:15:00.000Z",
+  "createdAt": "2026-03-14T10:14:00.000Z",
+  "updatedAt": "2026-03-14T10:15:00.000Z"
+}
+```
+
+#### DELETE /teams/:teamId/projects/:projectId/notifications/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/notifications/{{NOTIFICATION_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{NOTIFICATION_ID}}",
+  "channel": "SLACK",
+  "address": "#ops-alerts",
+  "status": "SENT",
+  "incident": {
+    "id": "{{INCIDENT_ID}}"
+  },
+  "alert": {
+    "id": "{{ALERT_ID}}"
+  },
+  "message": "Incident acknowledged",
+  "title": "Incident Update",
+  "sentAt": "2026-03-14T10:15:00.000Z",
+  "createdAt": "2026-03-14T10:14:00.000Z",
+  "updatedAt": "2026-03-14T10:15:00.000Z"
+}
+```
+
+### Alert Policy
+
+#### POST /teams/:teamId/projects/:projectId/alert-policy
+
+```bash
+curl -X POST "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/alert-policy" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Latency + Availability Policy",
+    "rules":{
+      "version":"1.0",
+      "rules":[
+        {
+          "metric":"p95",
+          "operator":">",
+          "threshold":300,
+          "window":"5m"
+        }
+      ],
+      "logic":"AND",
+      "actions":["create_incident"],
+      "suppression":{
+        "cooldown":"15m",
+        "maintenance":[
+          {
+            "start":"2026-03-20T00:00:00.000Z",
+            "end":"2026-03-20T02:00:00.000Z"
+          }
+        ]
+      }
+    },
+    "notificationChannels":[
+      {
+        "channelType":"slack",
+        "address":"#ops-alerts"
+      },
+      {
+        "channelType":"email",
+        "address":"oncall@example.com"
+      }
+    ]
+  }'
+```
+
+```json
+{
+  "id": "{{ALERT_POLICY_ID}}",
+  "name": "Latency + Availability Policy",
+  "rules": {
+    "version": "1.0",
+    "rules": [
+      {
+        "metric": "p95",
+        "operator": ">",
+        "threshold": 300,
+        "window": "5m"
+      }
+    ],
+    "logic": "AND",
+    "actions": ["create_incident"],
+    "suppression": {
+      "cooldown": "15m",
+      "maintenance": [
+        {
+          "start": "2026-03-20T00:00:00.000Z",
+          "end": "2026-03-20T02:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "notificationChannels": [
+    {
+      "channelType": "slack",
+      "address": "#ops-alerts"
+    },
+    {
+      "channelType": "email",
+      "address": "oncall@example.com"
+    }
+  ],
+  "createdAt": "2026-03-14T10:16:00.000Z",
+  "updatedAt": "2026-03-14T10:16:00.000Z"
+}
+```
+
+#### GET /teams/:teamId/projects/:projectId/alert-policy
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/alert-policy" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+[
+  {
+    "id": "{{ALERT_POLICY_ID}}",
+    "name": "Latency + Availability Policy",
+    "rules": {
+      "version": "1.0",
+      "rules": [
+        {
+          "metric": "p95",
+          "operator": ">",
+          "threshold": 300,
+          "window": "5m"
+        }
+      ],
+      "logic": "AND",
+      "actions": ["create_incident"],
+      "suppression": {
+        "cooldown": "15m",
+        "maintenance": [
+          {
+            "start": "2026-03-20T00:00:00.000Z",
+            "end": "2026-03-20T02:00:00.000Z"
+          }
+        ]
+      }
+    },
+    "notificationChannels": [
+      {
+        "channelType": "slack",
+        "address": "#ops-alerts"
+      },
+      {
+        "channelType": "email",
+        "address": "oncall@example.com"
+      }
+    ],
+    "createdAt": "2026-03-14T10:16:00.000Z",
+    "updatedAt": "2026-03-14T10:16:00.000Z"
+  }
+]
+```
+
+#### GET /teams/:teamId/projects/:projectId/alert-policy/:id
+
+```bash
+curl -X GET "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/alert-policy/{{ALERT_POLICY_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "id": "{{ALERT_POLICY_ID}}",
+  "name": "Latency + Availability Policy",
+  "rules": {
+    "version": "1.0",
+    "rules": [
+      {
+        "metric": "p95",
+        "operator": ">",
+        "threshold": 300,
+        "window": "5m"
+      }
+    ],
+    "logic": "AND",
+    "actions": ["create_incident"],
+    "suppression": {
+      "cooldown": "15m",
+      "maintenance": [
+        {
+          "start": "2026-03-20T00:00:00.000Z",
+          "end": "2026-03-20T02:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "notificationChannels": [
+    {
+      "channelType": "slack",
+      "address": "#ops-alerts"
+    },
+    {
+      "channelType": "email",
+      "address": "oncall@example.com"
+    }
+  ],
+  "createdAt": "2026-03-14T10:16:00.000Z",
+  "updatedAt": "2026-03-14T10:16:00.000Z"
+}
+```
+
+#### PATCH /teams/:teamId/projects/:projectId/alert-policy/:id
+
+```bash
+curl -X PATCH "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/alert-policy/{{ALERT_POLICY_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Latency Policy Updated",
+    "rules":{
+      "version":"1.0",
+      "rules":[
+        {
+          "metric":"p99",
+          "operator":">",
+          "threshold":450,
+          "window":"5m"
+        }
+      ],
+      "logic":"AND",
+      "actions":["create_incident"],
+      "suppression":{
+        "cooldown":"10m",
+        "maintenance":[]
+      }
+    },
+    "notificationChannels":[
+      {
+        "channelType":"slack",
+        "address":"#ops-alerts"
+      }
+    ]
+  }'
+```
+
+```json
+{
+  "id": "{{ALERT_POLICY_ID}}",
+  "name": "Latency Policy Updated",
+  "rules": {
+    "version": "1.0",
+    "rules": [
+      {
+        "metric": "p99",
+        "operator": ">",
+        "threshold": 450,
+        "window": "5m"
+      }
+    ],
+    "logic": "AND",
+    "actions": ["create_incident"],
+    "suppression": {
+      "cooldown": "10m",
+      "maintenance": []
+    }
+  },
+  "notificationChannels": [
+    {
+      "channelType": "slack",
+      "address": "#ops-alerts"
+    }
+  ],
+  "createdAt": "2026-03-14T10:16:00.000Z",
+  "updatedAt": "2026-03-14T10:17:00.000Z"
+}
+```
+
+#### DELETE /teams/:teamId/projects/:projectId/alert-policy/:id
+
+```bash
+curl -X DELETE "{{BASE_URL}}/teams/{{TEAM_ID}}/projects/{{PROJECT_ID}}/alert-policy/{{ALERT_POLICY_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}"
+```
+
+```json
+{
+  "affected": 1,
+  "raw": []
+}
+```

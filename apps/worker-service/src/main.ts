@@ -22,6 +22,8 @@ async function bootstrap() {
       },
     },
   );
-  await app.listen();
+  await app.listen().then(() => {
+    console.log('Worker Service is consuming Kafka events...');
+  });
 }
 bootstrap();

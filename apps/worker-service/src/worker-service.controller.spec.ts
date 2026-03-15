@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { WorkerController } from './worker-service.controller';
 import { CheckExecutorService } from './checkExecutor.service';
 import { CheckExecutionEventProducerService } from './KafkaProducer.service';
@@ -58,20 +59,20 @@ describe('WorkerController', () => {
 
     it('should skip processing if validation fails', async () => {
       const invalidPayload = { url: 'not-a-url' };
-      const consoleSpy = jest
-        .spyOn(console, 'log')
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
         .mockImplementation(() => {});
 
       await controller.handleMonitoringData(invalidPayload, mockContext);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Invalid message'),
       );
       expect(
         checkExecutorService.collectHttpTimingMetrics,
       ).not.toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
 
     it('should call CheckCompleted when processing succeeds', async () => {
@@ -134,18 +135,18 @@ describe('WorkerController', () => {
       (
         checkExecutorService.collectHttpTimingMetrics as jest.Mock<any>
       ).mockRejectedValue(new Error('Unexpected'));
-      const consoleErrorSpy = jest
-        .spyOn(console, 'error')
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
         .mockImplementation(() => {});
 
       await controller.handleMonitoringData(validPayload, mockContext);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Unexpected error:',
         expect.any(Error),
       );
 
-      consoleErrorSpy.mockRestore();
+      loggerErrorSpy.mockRestore();
     });
   });
 });

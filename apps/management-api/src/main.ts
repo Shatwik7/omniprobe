@@ -4,11 +4,13 @@ import { NestFactory } from '@nestjs/core';
 import { ManagementApiModule } from './management-api.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ensureTopics } from '@app/kafka-topics';
 
 
 const logger = new Logger();
 
 async function bootstrap() {
+  await ensureTopics();
   const app = await NestFactory.create(ManagementApiModule);
   app.enableCors({
     origin: true,

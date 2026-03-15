@@ -39,6 +39,8 @@ describe('AlertPolicy E2E (real app + real db)', () => {
     // in this suite; override to short-circuit authorization logic.
     .overrideGuard(TeamMemberGuard)
     .useValue({ canActivate: () => true })
+    .overrideProvider('KAFKA_PRODUCER')
+    .useValue({ emit: () => undefined })
     .compile();
 
     app = moduleFixture.createNestApplication();
@@ -101,39 +103,43 @@ describe('AlertPolicy E2E (real app + real db)', () => {
   }, 30000);
 
   afterAll(async () => {
-    // clear dependent tables first
-    const ds: DataSource = app.get(DataSource);
-    await ds.query('DELETE FROM "incidents";');
+    try {
+      // clear dependent tables first
+      const ds: DataSource = app.get(DataSource);
+      await ds.query('DELETE FROM "incidents";');
 
-    if (monitorRepo && created.monitors.length) {
-      await monitorRepo.delete(created.monitors);
-    }
-    if (alertPolicyRepo && created.policies.length) {
-      await alertPolicyRepo.delete(created.policies);
-    }
-    if (projectsRepo && created.projects.length) {
-      await projectsRepo.delete(created.projects);
-    }
-    if (teamsRepo && created.teams.length) {
-      // remove team members first
-      for (const tid of created.teams) {
-        const team = await teamsRepo.findOne({
-          where: { id: tid },
-          relations: ['members'],
-        });
-        if (team) {
-          team.members = [];
-          await teamsRepo.save(team);
-        }
+      if (monitorRepo && created.monitors.length) {
+        await monitorRepo.delete(created.monitors);
       }
-      await teamsRepo.delete(created.teams);
+      if (alertPolicyRepo && created.policies.length) {
+        await alertPolicyRepo.delete(created.policies);
+      }
+      if (projectsRepo && created.projects.length) {
+        await projectsRepo.delete(created.projects);
+      }
+      if (teamsRepo && created.teams.length) {
+        // remove team members first
+        for (const tid of created.teams) {
+          const team = await teamsRepo.findOne({
+            where: { id: tid },
+            relations: ['members'],
+          });
+          if (team) {
+            team.members = [];
+            await teamsRepo.save(team);
+          }
+        }
+        await teamsRepo.delete(created.teams);
+      }
+      if (usersRepo && created.users.length) {
+        await usersRepo.delete(created.users);
+      }
+    } finally {
+      if (app) {
+        await app.close();
+      }
     }
-    if (usersRepo && created.users.length) {
-      await usersRepo.delete(created.users);
-    }
-
-    await app.close();
-  });
+  }, 30000);
 
   beforeEach(async () => {
     const ds: DataSource = app.get(DataSource);

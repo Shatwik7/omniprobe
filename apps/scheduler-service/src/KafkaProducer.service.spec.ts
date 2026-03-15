@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { KafkaProducerService } from './KafkaProducer.service';
 import { ClientKafka } from '@nestjs/microservices';
 import {
@@ -61,8 +62,8 @@ describe('KafkaProducerService', () => {
     });
 
     it('should return false and log error when emit fails', async () => {
-      const consoleSpy = jest
-        .spyOn(console, 'error')
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
         .mockImplementation(() => {});
       const error = new Error('Kafka emit failed');
       mockKafkaClient.emit.mockImplementation(() => {
@@ -71,11 +72,13 @@ describe('KafkaProducerService', () => {
 
       const result = await service.emitCheckExecutionRequested(mockEvent);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
         'Error emitting Kafka event:',
         error,
       );
       expect(result).toBe(false);
+
+      loggerErrorSpy.mockRestore();
     });
   });
 });

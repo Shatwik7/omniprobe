@@ -19,6 +19,8 @@ async function bootstrap() {
           },
         },
       });
-  await app.listen();
+  await app.listen().then(() => {
+    console.log('Alert Engine Service is consuming Kafka events...');
+  });
 }
 bootstrap().catch((err)=>console.log(err));

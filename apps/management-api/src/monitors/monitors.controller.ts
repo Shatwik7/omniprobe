@@ -8,22 +8,34 @@ import {
   Delete,
   UseGuards,
   ParseUUIDPipe,
+  Inject,
 } from '@nestjs/common';
 import { MonitorsService } from './monitors.service';
 import { CreateMonitorDto } from './dto/create-monitor.dto';
 import { UpdateMonitorDto } from './dto/update-monitor.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TeamMemberGuard } from '../auth/guards/teamMember.guard';
+import { CheckExecutionAddEvent, Topics } from '@app/kafka-topics';
+import { ClientKafka } from '@nestjs/microservices';
 
 @Controller('teams/:teamId/projects/:projectId/monitors')
 @UseGuards(JwtAuthGuard)
 export class MonitorsController {
-  constructor(private readonly monitorsService: MonitorsService) {}
+  constructor(
+    private readonly monitorsService: MonitorsService,
+    @Inject('KAFKA_PRODUCER') private readonly kafkaProducer: ClientKafka,
+  ) {}
 
   @Post()
   @UseGuards(TeamMemberGuard)
-  create(@Body() createMonitorDto: CreateMonitorDto) {
-    return this.monitorsService.create(createMonitorDto);
+  async create(@Body() createMonitorDto: CreateMonitorDto) {
+    const createdMonitor = await this.monitorsService.create(createMonitorDto);
+    const event: CheckExecutionAddEvent = {
+      id: createdMonitor.id,
+      frequency: createMonitorDto.frequencySeconds,
+    };
+    this.kafkaProducer.emit(Topics.CHECK_EXECUTION_ADD, event);
+    return createdMonitor;
   }
 
   @Get()

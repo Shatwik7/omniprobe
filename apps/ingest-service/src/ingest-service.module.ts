@@ -4,11 +4,7 @@ import { IngestServiceService } from './ingest-service.service';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule } from '@nestjs/config';
 import {
-  AlertPolicy,
   DatabaseModule,
-  Incident,
-  Metric,
-  Monitor,
 } from '@app/database';
 import { TypeOrmModule } from '@nestjs/typeorm';
 

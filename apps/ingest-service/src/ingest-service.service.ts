@@ -3,14 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientKafka } from '@nestjs/microservices';
 
-import { Monitor, Metric, Incident, AlertPolicy } from '@app/database';
-import { IncidentStatus } from '@app/database/entity/incident.entity';
+import { Monitor, Metric, Incident, AlertPolicy, NotificationChannel } from '@app/database';
+import { IncidentSeverity, IncidentStatus } from '@app/database/entity/incident.entity';
 
 import {
   CheckExecutionCompletedEvent,
   CheckExecutionFailedEvent,
+  HttpCheckError,
   Topics,
 } from '@app/kafka-topics';
+import { IncidentTriggeredEvent } from '@app/kafka-topics/dtos/IncidentTriggeredEvent.dto';
 
 @Injectable()
 export class IngestServiceService {
@@ -29,7 +31,7 @@ export class IngestServiceService {
 
     @Inject('KAFKA_PRODUCER')
     private readonly kafkaClient: ClientKafka,
-  ) {}
+  ) { }
 
   /**
    * COMPLETION EVENT
@@ -52,7 +54,7 @@ export class IngestServiceService {
 
     if (!success) {
       if (!openIncident) {
-        await this.createIncident(monitor, 'BAD_RESPONSE');
+        await this.createIncident(monitor, 'BAD_RESPONSE', null);
       }
       return;
     }
@@ -80,7 +82,7 @@ export class IngestServiceService {
     const openIncident = await this.getOpenIncident(monitor.id);
 
     if (!openIncident) {
-      await this.createIncident(monitor, event.Response.error_type);
+      await this.createIncident(monitor, event.Response.error_type, event.Response);
     }
   }
 
@@ -161,21 +163,39 @@ export class IngestServiceService {
    * @param monitor Monitor (libs/database)
    * @param reason
    */
-  private async createIncident(monitor: Monitor, reason: string) {
+  private async createIncident(monitor: Monitor, reason: string, httpCheckError:HttpCheckError|null) {
     const incident = this.incidentRepo.create({
       monitor,
       status: IncidentStatus.OPEN,
-      summary: reason,
+      summary: JSON.stringify(httpCheckError),
+      severity: IncidentSeverity.CRITICAL,
     });
-
     await this.incidentRepo.save(incident);
-
-    this.kafkaClient.emit(Topics.INCIDENTS_CREATED, {
-      incidentId: incident.id,
-      monitorId: monitor.id,
-      reason,
-      createdAt: new Date(),
-    });
+    const alertPolicy = await this.alertPolicyRepo.findOne({ where: { id: monitor.alertPolicy?.id } });
+    await this.monitorRepo.update(monitor.id, { isLive: false });
+    let message: IncidentTriggeredEvent = {
+        title: `Incident for monitor ${monitor.name} : System Down`,
+        message: `An incident has been triggered for monitor ${monitor.name} due to ${reason}`,
+        channel: 'system',
+        address: monitor.project.name,
+        Incident: incident.id,
+        Project: monitor.project.id
+      };
+    this.kafkaClient.emit(Topics.INCIDENTS_TRIGGERED_NOTIFICATIONS, message);
+    if (alertPolicy){
+      alertPolicy.notificationChannels?.forEach((channel: NotificationChannel) => {
+        let message: IncidentTriggeredEvent = {
+          title: `Incident for monitor ${monitor.name} : System Down`,
+          message: `An incident has been triggered for monitor ${monitor.name} due to ${reason}`,
+          channel: channel.channelType,
+          address: channel.address,
+          Incident: incident.id,
+          Project: monitor.project.id
+        };
+        this.kafkaClient.emit(Topics.INCIDENTS_TRIGGERED_NOTIFICATIONS, message);
+      });
+    }
+    return;
   }
 
   /**

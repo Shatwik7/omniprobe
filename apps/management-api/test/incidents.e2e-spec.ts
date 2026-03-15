@@ -144,7 +144,10 @@ describe('Incidents (e2e, real app + real db)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [ManagementApiModule],
-    }).compile();
+    })
+      .overrideProvider('KAFKA_PRODUCER')
+      .useValue({ emit: () => undefined })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
@@ -168,40 +171,42 @@ describe('Incidents (e2e, real app + real db)', () => {
   }, 30000);
 
   afterAll(async () => {
-    if (incidentsRepository && createdIncidentIds.length > 0) {
-      await incidentsRepository.delete(createdIncidentIds);
-    }
-
-    if (monitorsRepository && createdMonitorIds.length > 0) {
-      await monitorsRepository.delete(createdMonitorIds);
-    }
-
-    if (projectsRepository && createdProjectIds.length > 0) {
-      await projectsRepository.delete(createdProjectIds);
-    }
-
-    if (teamsRepository && createdTeamIds.length > 0) {
-      for (const teamId of createdTeamIds) {
-        const team = await teamsRepository.findOne({
-          where: { id: teamId },
-          relations: ['members'],
-        });
-        if (team) {
-          team.members = [];
-          await teamsRepository.save(team);
-        }
+    try {
+      if (incidentsRepository && createdIncidentIds.length > 0) {
+        await incidentsRepository.delete(createdIncidentIds);
       }
-      await teamsRepository.delete(createdTeamIds);
-    }
 
-    if (usersRepository && createdUserIds.length > 0) {
-      await usersRepository.delete(createdUserIds);
-    }
+      if (monitorsRepository && createdMonitorIds.length > 0) {
+        await monitorsRepository.delete(createdMonitorIds);
+      }
 
-    if (app) {
-      await app.close();
+      if (projectsRepository && createdProjectIds.length > 0) {
+        await projectsRepository.delete(createdProjectIds);
+      }
+
+      if (teamsRepository && createdTeamIds.length > 0) {
+        for (const teamId of createdTeamIds) {
+          const team = await teamsRepository.findOne({
+            where: { id: teamId },
+            relations: ['members'],
+          });
+          if (team) {
+            team.members = [];
+            await teamsRepository.save(team);
+          }
+        }
+        await teamsRepository.delete(createdTeamIds);
+      }
+
+      if (usersRepository && createdUserIds.length > 0) {
+        await usersRepository.delete(createdUserIds);
+      }
+    } finally {
+      if (app) {
+        await app.close();
+      }
     }
-  });
+  }, 30000);
 
   it('POST /teams/:teamId/projects/:projectId/monitors/:monitorId/incidents should create incident', async () => {
     const auth = await createAuthenticatedUser();

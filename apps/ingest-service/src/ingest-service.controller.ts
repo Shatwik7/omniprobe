@@ -67,7 +67,7 @@ export class IngestServiceController {
   }
 
   @EventPattern(Topics.CHECK_EXECUTION_COMPLETED)
-  async handleCheckExecutionCompleted(@Payload() message: unknown) {
+  async handleCheckExecutionCompleted(@Payload() message: CheckExecutionCompletedEvent) {
     const data = this.toCheckExecutionCompletedEvent(message);
     if (!data) return;
 
@@ -81,7 +81,7 @@ export class IngestServiceController {
   }
 
   @EventPattern(Topics.CHECK_EXECUTION_FAILED)
-  async handleCheckExecutionFailed(@Payload() message: unknown) {
+  async handleCheckExecutionFailed(@Payload() message: CheckExecutionFailedEvent) {
     const data = this.toCheckExecutionFailedEvent(message);
     if (!data) return;
 

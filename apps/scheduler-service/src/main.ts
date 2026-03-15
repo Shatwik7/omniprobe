@@ -40,6 +40,6 @@ async function bootstrap() {
   );
 
   await app.listen();
-  console.log('Kafka Microservice is listening...');
+  console.log('Scheduler Service working...');
 }
 bootstrap();

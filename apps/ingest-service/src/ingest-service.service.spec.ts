@@ -23,9 +23,15 @@ describe('IngestServiceService', () => {
 
   const mockMonitor = {
     id: 'monitor-id',
+    name: 'monitor-name',
     isActive: true,
     isLive: true,
     expectedStatus: 200,
+    project: {
+      id: 'project-id',
+      name: 'project-name',
+    },
+    alertPolicy: undefined,
   } as Monitor;
 
   beforeEach(async () => {
@@ -34,7 +40,7 @@ describe('IngestServiceService', () => {
         IngestServiceService,
         {
           provide: getRepositoryToken(Monitor),
-          useValue: { findOne: jest.fn() },
+          useValue: { findOne: jest.fn(), update: jest.fn() },
         },
         {
           provide: getRepositoryToken(Metric),
@@ -46,7 +52,7 @@ describe('IngestServiceService', () => {
         },
         {
           provide: getRepositoryToken(AlertPolicy),
-          useValue: {},
+          useValue: { findOne: jest.fn() },
         },
         {
           provide: 'KAFKA_PRODUCER',
@@ -138,11 +144,12 @@ describe('IngestServiceService', () => {
       expect(incidentRepo.create).toHaveBeenCalledWith({
         monitor: mockMonitor,
         status: IncidentStatus.OPEN,
-        summary: 'BAD_RESPONSE',
+        summary: 'null',
+        severity: 'CRITICAL',
       });
       expect(incidentRepo.save).toHaveBeenCalledTimes(1);
       expect(kafkaClient.emit).toHaveBeenCalledWith(
-        Topics.INCIDENTS_CREATED,
+        Topics.INCIDENTS_TRIGGERED_NOTIFICATIONS,
         expect.any(Object),
       );
     });
@@ -236,11 +243,12 @@ describe('IngestServiceService', () => {
       expect(incidentRepo.create).toHaveBeenCalledWith({
         monitor: mockMonitor,
         status: IncidentStatus.OPEN,
-        summary: HttpErrorType.TIMEOUT_ERROR,
+        summary: JSON.stringify(failureEvent.Response),
+        severity: 'CRITICAL',
       });
       expect(incidentRepo.save).toHaveBeenCalledTimes(1);
       expect(kafkaClient.emit).toHaveBeenCalledWith(
-        Topics.INCIDENTS_CREATED,
+        Topics.INCIDENTS_TRIGGERED_NOTIFICATIONS,
         expect.any(Object),
       );
     });
