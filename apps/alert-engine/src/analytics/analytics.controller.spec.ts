@@ -92,6 +92,7 @@ describe('AnalyticsController', () => {
       MONITOR_ID,
       REGION_ID,
       2500,
+      10,
     );
     expect(longPollingService.publishUpdate).toHaveBeenCalledWith(
       `analytics:${MONITOR_ID}`,
