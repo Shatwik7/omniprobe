@@ -107,53 +107,61 @@ describe('SchedulerServiceController (e2e)', () => {
       await controller.handleCheckExecutionRequested(data);
 
       expect(addItemSpy).toHaveBeenCalledWith(
-        'check-execution-queue',
+        'monitors',
         expect.any(Number),
         data.id,
       );
     });
 
     it('should handle invalid JSON message', async () => {
-      const consoleLogSpy = jest.spyOn(console, 'log');
+      const errorSpy = jest
+        .spyOn((controller as any).logger, 'error')
+        .mockImplementation(() => undefined);
       const addItemSpy = jest.spyOn(priorityQueue, 'addItem');
       const invalidData = 'invalid-json';
 
       await controller.handleCheckExecutionRequested(invalidData);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
+      expect(errorSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
       expect(addItemSpy).not.toHaveBeenCalled();
     });
 
     it('should handle message with validation errors', async () => {
-      const consoleLogSpy = jest.spyOn(console, 'log');
+      const errorSpy = jest
+        .spyOn((controller as any).logger, 'error')
+        .mockImplementation(() => undefined);
       const addItemSpy = jest.spyOn(priorityQueue, 'addItem');
       const invalidData = { id: 'not-a-uuid', frequency: -10 };
 
       await controller.handleCheckExecutionRequested(invalidData);
 
-      expect(consoleLogSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
+      expect(errorSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
       expect(addItemSpy).not.toHaveBeenCalled();
     });
 
     it('should handle non-object message', async () => {
-        const consoleLogSpy = jest.spyOn(console, 'log');
+        const errorSpy = jest
+          .spyOn((controller as any).logger, 'error')
+          .mockImplementation(() => undefined);
         const addItemSpy = jest.spyOn(priorityQueue, 'addItem');
         const invalidData = 123;
   
         await controller.handleCheckExecutionRequested(invalidData);
   
-        expect(consoleLogSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
+        expect(errorSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
         expect(addItemSpy).not.toHaveBeenCalled();
     });
 
     it('should handle array message', async () => {
-        const consoleLogSpy = jest.spyOn(console, 'log');
+        const errorSpy = jest
+          .spyOn((controller as any).logger, 'error')
+          .mockImplementation(() => undefined);
         const addItemSpy = jest.spyOn(priorityQueue, 'addItem');
         const invalidData = [ { id: uuidv4(), frequency: 60 }];
   
         await controller.handleCheckExecutionRequested(invalidData);
   
-        expect(consoleLogSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
+        expect(errorSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
         expect(addItemSpy).not.toHaveBeenCalled();
     });
   });
