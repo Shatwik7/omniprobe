@@ -100,7 +100,7 @@ export class IngestServiceService {
   ) {
     if (
       monitor.expectedStatus &&
-      event.Response.status_code !== monitor.expectedStatus
+      (event.Response.status_code ?? 0) !== monitor.expectedStatus
     )
       return false;
 
@@ -122,7 +122,7 @@ export class IngestServiceService {
     const metric = this.metricRepo.create({
       monitor,
       isSuccess: success,
-      statusCode: event.Response.status_code,
+      statusCode: event.Response.status_code ?? 0,
       durationMs: timings.total,
       breakdown: timings.breakdown,
       total_time_ms: timings.total,
