@@ -1,35 +1,28 @@
-# -----------------------------
-# Build stage
-# -----------------------------
-FROM node:24-alpine AS nest-build
+FROM node:24-alpine AS build
 
 WORKDIR /workspace
 
-# Copy dependency files first (better caching)
+# Install dependencies once for the build.
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy EVERYTHING needed for Nest build
+# Copy monorepo sources required for Nest build.
 COPY tsconfig*.json ./
 COPY nest-cli.json ./
 COPY apps ./apps
 COPY libs ./libs
 
-# Build only management-api
 RUN npx nest build management-api
-
-# Run esbuild bundling
 RUN node apps/management-api/build.js
 
+FROM node:24-alpine AS prod
 
-# -----------------------------
-# Production stage (minimal)
-# -----------------------------
-FROM gcr.io/distroless/nodejs24-debian12 AS prod
-
+ENV NODE_ENV=production
 WORKDIR /app
 
-COPY --from=nest-build /workspace/apps/management-api/build/main.js ./main.js
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
-EXPOSE 3000
-CMD ["main.js"]
+COPY --from=build /workspace/apps/management-api/build/main.js ./main.js
+
+CMD ["node", "main.js"]
