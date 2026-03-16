@@ -8,6 +8,9 @@
   "scripts": {
     "start:all": "concurrently \"npm run start:dev ingest-service\" \"npm run start:dev worker-service\" \"npm run start:dev alert-engine\" \"npm run start:dev management-api\" \"npm run start:dev notification-service\" \"npm run start:dev scheduler-service\"",
     "dockerize:management-api": "docker build -f apps/management-api/Dockerfile . -t management-api",
+    "docker:deploy": "sh scripts/deploy-compose.sh",
+    "docker:deploy:down": "docker compose -f docker-compose.deploy.yaml down",
+    "docker:deploy:logs": "docker compose -f docker-compose.deploy.yaml logs -f",
     "build": "nest build",
     "seed:db": "ts-node -r tsconfig-paths/register scripts/seed-database.ts",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
