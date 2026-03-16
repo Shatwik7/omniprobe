@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ensureTopics } from '@app/kafka-topics';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
@@ -25,23 +24,6 @@ async function bootstrap() {
         },
       },
     },
-  );
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      stopAtFirstError: true,
-      disableErrorMessages: true,
-      exceptionFactory: (errors) => {
-        console.error(
-          'Validation failed for incoming Kafka message:',
-          JSON.stringify(errors),
-        );
-        return null;
-      },
-    }),
   );
 
   await app.listen().then(() => {

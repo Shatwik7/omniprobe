@@ -1,4 +1,4 @@
-import { Controller, Inject, Logger } from '@nestjs/common';
+import { Controller, Inject, Logger, ValidationPipe } from '@nestjs/common';
 import { IngestServiceService } from './ingest-service.service';
 import { ClientKafka, EventPattern, Payload } from '@nestjs/microservices';
 import {
@@ -6,96 +6,67 @@ import {
   CheckExecutionFailedEvent,
   Topics,
 } from '@app/kafka-topics';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
 
 @Controller()
 export class IngestServiceController {
   private readonly logger = new Logger('IngestServiceController');
+  private readonly payloadValidationPipe = new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    stopAtFirstError: true,
+    disableErrorMessages: true,
+    exceptionFactory: (errors) => {
+      console.error(
+        'Validation failed for incoming Kafka message:',
+        JSON.stringify(errors),
+      );
+      return null;
+    },
+  });
 
   constructor(
     private readonly ingestServiceService: IngestServiceService,
     @Inject('KAFKA_PRODUCER') private readonly kafkaClient: ClientKafka,
   ) {}
 
-  // Restored missing helper methods
-  private toCheckExecutionCompletedEvent(
-    data: unknown,
-  ): CheckExecutionCompletedEvent | null {
-    let parsedData: unknown = data;
-
-    if (typeof parsedData === 'string') {
-      try {
-        parsedData = JSON.parse(parsedData);
-      } catch {
-        return null;
-      }
-    }
-
-    if (
-      !parsedData ||
-      typeof parsedData !== 'object' ||
-      Array.isArray(parsedData)
-    ) {
-      return null;
-    }
-
-    return plainToInstance(CheckExecutionCompletedEvent, parsedData);
-  }
-
-  private toCheckExecutionFailedEvent(
-    data: unknown,
-  ): CheckExecutionFailedEvent | null {
-    let parsedData: unknown = data;
-
-    if (typeof parsedData === 'string') {
-      try {
-        parsedData = JSON.parse(parsedData);
-      } catch {
-        return null;
-      }
-    }
-
-    if (
-      !parsedData ||
-      typeof parsedData !== 'object' ||
-      Array.isArray(parsedData)
-    ) {
-      return null;
-    }
-
-    return plainToInstance(CheckExecutionFailedEvent, parsedData);
-  }
-
   @EventPattern(Topics.CHECK_EXECUTION_COMPLETED)
-  async handleCheckExecutionCompleted(@Payload() message: CheckExecutionCompletedEvent) {
+  async handleCheckExecutionCompleted(@Payload() message: unknown) {
     this.logger.log('Received CheckExecutionCompletedEvent', message);
-    const data = this.toCheckExecutionCompletedEvent(message);
-    if (!data) return;
 
-    const errors = await validate(data);
-    if (errors.length > 0) {
-      this.logger.log('❌ Invalid message. Skipping.', errors);
+    try {
+      const validatedMessage =
+        (await this.payloadValidationPipe.transform(message, {
+          type: 'body',
+          metatype: CheckExecutionCompletedEvent,
+        })) as CheckExecutionCompletedEvent;
+
+      await this.ingestServiceService.handleCheckCompletion(validatedMessage);
+    } catch {
+      this.logger.log('Invalid completed-event message. Skipping.');
       return;
     }
 
-    await this.ingestServiceService.handleCheckCompletion(data);
     return null;
   }
 
   @EventPattern(Topics.CHECK_EXECUTION_FAILED)
-  async handleCheckExecutionFailed(@Payload() message: CheckExecutionFailedEvent) {
+  async handleCheckExecutionFailed(@Payload() message: unknown) {
     this.logger.log('Received CheckExecutionFailedEvent', message);
-    const data = this.toCheckExecutionFailedEvent(message);
-    if (!data) return;
 
-    const errors = await validate(data);
-    if (errors.length > 0) {
-      this.logger.log('❌ Invalid message. Skipping.', errors);
+    try {
+      const validatedMessage =
+        (await this.payloadValidationPipe.transform(message, {
+          type: 'body',
+          metatype: CheckExecutionFailedEvent,
+        })) as CheckExecutionFailedEvent;
+
+      await this.ingestServiceService.handleCheckFailure(validatedMessage);
+    } catch {
+      this.logger.log('Invalid failed-event message. Skipping.');
       return;
     }
 
-    await this.ingestServiceService.handleCheckFailure(data);
     return null;
   }
 }

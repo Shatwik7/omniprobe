@@ -74,6 +74,21 @@ export class CheckExecutorService {
         resolve(result);
       };
 
+      const sanitizeTiming = (value: unknown): number | undefined => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          return undefined;
+        }
+
+        return Math.max(value, 0);
+      };
+
+      const sanitizeTimingForError = (value: unknown): number | undefined => {
+        const sanitized = sanitizeTiming(value);
+        return sanitized === undefined || sanitized === 0
+          ? undefined
+          : sanitized;
+      };
+
       const createError = (
         errorType: HttpErrorType,
         error: Error | any,
@@ -86,13 +101,15 @@ export class CheckExecutorService {
           timestamp: Date.now(),
           url: urlString,
           partial_timings: {
-            dns_lookup_end: timings.dns_lookup_end || undefined,
-            tcp_beginning_start: timings.tcp_beginning_start || undefined,
-            tcp_end: timings.tcp_end || undefined,
-            tls_start: timings.tls_start || undefined,
-            tls_end: timings.tls_end || undefined,
-            ttfb: timings.ttfb || undefined,
-            tdt: timings.tdt || undefined,
+            dns_lookup_end: sanitizeTimingForError(timings.dns_lookup_end),
+            tcp_beginning_start: sanitizeTimingForError(
+              timings.tcp_beginning_start,
+            ),
+            tcp_end: sanitizeTimingForError(timings.tcp_end),
+            tls_start: sanitizeTimingForError(timings.tls_start),
+            tls_end: sanitizeTimingForError(timings.tls_end),
+            ttfb: sanitizeTimingForError(timings.ttfb),
+            tdt: sanitizeTimingForError(timings.tdt),
           },
         };
       };
@@ -170,17 +187,28 @@ export class CheckExecutorService {
               timings.tcp_end || timings.tcp_beginning_start;
             timings.server_processing_time = timings.ttfb - connectionTime;
 
+            const dnsLookupEnd = sanitizeTiming(timings.dns_lookup_end) ?? 0;
+            const tcpBeginningStart =
+              sanitizeTiming(timings.tcp_beginning_start) ?? dnsLookupEnd;
+            const tcpEnd = sanitizeTiming(timings.tcp_end) ?? tcpBeginningStart;
+            const tlsStart = sanitizeTiming(timings.tls_start) ?? tcpEnd;
+            const tlsEnd = sanitizeTiming(timings.tls_end) ?? tlsStart;
+            const ttfb = sanitizeTiming(timings.ttfb) ?? tlsEnd;
+            const tdt = sanitizeTiming(timings.tdt) ?? ttfb;
+            const serverProcessingTime =
+              sanitizeTiming(timings.server_processing_time) ?? 0;
+
             settle({
               success: true,
               metrics: {
-                dns_lookup_end: timings.dns_lookup_end,
-                tcp_beginning_start: timings.tcp_beginning_start,
-                tcp_end: timings.tcp_end,
-                tls_start: timings.tls_start,
-                tls_end: timings.tls_end,
-                ttfb: timings.ttfb,
-                tdt: timings.tdt,
-                server_processing_time: timings.server_processing_time,
+                dns_lookup_end: dnsLookupEnd,
+                tcp_beginning_start: tcpBeginningStart,
+                tcp_end: tcpEnd,
+                tls_start: tlsStart,
+                tls_end: tlsEnd,
+                ttfb,
+                tdt,
+                server_processing_time: serverProcessingTime,
                 status_code: statusCode,
               },
             });

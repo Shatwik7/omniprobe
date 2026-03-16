@@ -55,6 +55,13 @@ export class CreateMonitorDto {
   @IsString()
   body?: string;
 
+  @ApiProperty({ required: false, default: [] })
+  @IsOptional()
+  @Min(1)
+  @IsInt({ each: true })
+  timeout?: number = 30000; // in milliseconds
+
+
   @ApiProperty({ required: false, type: [Object], nullable: true })
   @IsOptional()
   @IsArray()

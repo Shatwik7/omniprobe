@@ -102,7 +102,7 @@ export class CheckSchedulerService implements OnModuleInit {
         checkId: monitor.id,
         url: monitor.target,
         enqueuedAt: new Date().toISOString(),
-        timeout: monitor.frequencySeconds * 1000,
+        timeout: monitor.timeout  || 30000, // default to 30 seconds if not set
         method: HttpMethod(monitor.method),
         headers: monitor.headers,
         body: monitor.body,

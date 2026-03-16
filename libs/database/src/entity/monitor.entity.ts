@@ -88,9 +88,15 @@ export class Monitor {
   @OneToMany(() => Metric, (metric) => metric.monitor)
   metrics!: Metric[];
 
+  @ApiProperty()
+  @Column({ type: 'int', default: 30000 })
+  timeout?: number; // in milliseconds
+
+  @ApiProperty()
   @Column({ type: 'int', default: 200 })
   expectedStatus!: number;
 
+  @ApiProperty()
   @Column({ type: 'jsonb', nullable: true })
   expectedBody?: Record<string, any>;
 
