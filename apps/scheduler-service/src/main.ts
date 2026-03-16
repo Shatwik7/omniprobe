@@ -6,7 +6,7 @@ import { SchedulerServiceModule } from './scheduler-service.module';
 
 import { ValidationPipe } from '@nestjs/common';
 import { ensureTopics } from '@app/kafka-topics';
-
+import { Logger } from '@nestjs/common';
 async function bootstrap() {
   await ensureTopics();
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
@@ -36,6 +36,14 @@ async function bootstrap() {
       transform: true,
       stopAtFirstError: true,
       disableErrorMessages: true,
+      exceptionFactory: (errors) => {
+        const logger = new Logger('ValidationPipe');
+        logger.error(
+          'Validation failed for incoming Kafka message:',
+          JSON.stringify(errors),
+        );
+        return null;
+      }
     }),
   );
 

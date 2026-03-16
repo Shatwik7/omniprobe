@@ -46,7 +46,7 @@ describe('CheckSchedulerController', () => {
     await controller.handleCheckExecutionRequested(mockData);
 
     expect(addItemSpy).toHaveBeenCalledWith(
-      'check-execution-queue',
+      'monitors',
       expect.any(Number), // Score should be a timestamp
       mockData.id,
     );
@@ -64,7 +64,7 @@ describe('CheckSchedulerController', () => {
     await controller.handleCheckExecutionRequested(JSON.stringify(mockData));
 
     expect(addItemSpy).toHaveBeenCalledWith(
-      'check-execution-queue',
+      'monitors',
       expect.any(Number), // Score should be a timestamp
       mockData.id,
     );
@@ -74,14 +74,14 @@ describe('CheckSchedulerController', () => {
     const addItemSpy = jest
       .spyOn(priorityQueue, 'addItem')
       .mockResolvedValue(1);
-    const logSpy = jest
-      .spyOn(console, 'log')
+    const errorSpy = jest
+      .spyOn((controller as any).logger, 'error')
       .mockImplementation(() => undefined);
 
     await controller.handleCheckExecutionRequested('{bad-json');
 
     expect(addItemSpy).not.toHaveBeenCalled();
-    expect(logSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
+    expect(errorSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
   });
 
   it('should skip invalid DTO payload', async () => {
@@ -92,13 +92,13 @@ describe('CheckSchedulerController', () => {
     const addItemSpy = jest
       .spyOn(priorityQueue, 'addItem')
       .mockResolvedValue(1);
-    const logSpy = jest
-      .spyOn(console, 'log')
+    const errorSpy = jest
+      .spyOn((controller as any).logger, 'error')
       .mockImplementation(() => undefined);
 
     await controller.handleCheckExecutionRequested(invalidPayload);
 
     expect(addItemSpy).not.toHaveBeenCalled();
-    expect(logSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
+    expect(errorSpy).toHaveBeenCalledWith('❌ Invalid message. Skipping.');
   });
 });

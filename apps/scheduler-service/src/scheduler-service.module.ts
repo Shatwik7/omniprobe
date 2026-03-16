@@ -35,7 +35,6 @@ import { DatabaseModule } from '@app/database';
   controllers: [CheckSchedulerController],
   providers: [
     CheckSchedulerService,
-    CheckSchedulerController,
     KafkaProducerService,
     CacheService,
     PriorityQueue,
