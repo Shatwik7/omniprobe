@@ -9,6 +9,8 @@ import { RateLimiterModule } from 'nestjs-rate-limiter';
 import { WebHookService } from './notification-providers/WebHook.service';
 import { LongPollingModule } from '@app/common/long-polling/long-polling.module';
 import { SlackService } from './notification-providers/Slack.service';
+import { Sms } from 'twilio/lib/twiml/VoiceResponse';
+import { SmsService } from './notification-providers/Sms.service';
 
 @Module({
   imports: [
@@ -29,6 +31,6 @@ import { SlackService } from './notification-providers/Slack.service';
     })
   ],
   controllers: [NotificationServiceController],
-  providers: [NotificationServiceService, EmailService, WebHookService, SlackService],
+  providers: [NotificationServiceService, EmailService, WebHookService, SlackService, SmsService],
 })
 export class NotificationServiceModule { }

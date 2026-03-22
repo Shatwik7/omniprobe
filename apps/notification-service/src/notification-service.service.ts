@@ -8,6 +8,7 @@ import { WebHookService } from './notification-providers/WebHook.service';
 import { IncidentTriggeredEvent } from '@app/kafka-topics/dtos/IncidentTriggeredEvent.dto';
 import { LongPollingService } from '@app/common/long-polling/long-polling.service';
 import { SlackService } from './notification-providers/Slack.service';
+import { SmsService } from './notification-providers/Sms.service';
 
 @Injectable()
 export class NotificationServiceService {
@@ -21,6 +22,7 @@ export class NotificationServiceService {
     private readonly webHookService: WebHookService,
     private readonly longPollingService: LongPollingService,
     private readonly slackService: SlackService,
+    private readonly smsService: SmsService,
   ) { }
 
   private isRateLimited(key: string): boolean {
@@ -94,9 +96,14 @@ export class NotificationServiceService {
         break;
       case 'sms':
         // Implement SMS sending logic here
-        this.logger.log(`SMS notifications are not implemented yet.`);
-        notification.status = 'PENDING';
-        await this.notificationRepository.save(notification);
+        // this.smsService.sendSms(data.address, `${data.title}\n\n${data.message}`).then(() => {
+        //   notification.status = 'SENT';
+        //   return this.notificationRepository.save(notification);
+        // }).catch(err => {
+        //   this.logger.error(`Failed to send SMS notification: ${err.message}`);
+        //   notification.status = 'FAILED';
+        //   return this.notificationRepository.save(notification);
+        // });
         break;
       default:
         this.logger.log(
@@ -145,9 +152,14 @@ export class NotificationServiceService {
         break;
       case 'sms':
         // Implement SMS sending logic here
-        this.logger.log(`SMS notifications are not implemented yet.`);
-        notification.status = 'PENDING';
-        await this.notificationRepository.save(notification);
+        // this.smsService.sendSms(data.address, `${data.title}\n\n${data.message}`).then(() => {
+        //   notification.status = 'SENT';
+        //   return this.notificationRepository.save(notification);
+        // }).catch(err => {
+        //   this.logger.error(`Failed to send SMS notification: ${err.message}`);
+        //   notification.status = 'FAILED';
+        //   return this.notificationRepository.save(notification);
+        // }); 
         break;
       default:
         this.logger.log(
