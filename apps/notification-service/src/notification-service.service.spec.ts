@@ -10,12 +10,17 @@ import { WebHookService } from './notification-providers/WebHook.service';
 import { ConfigModule } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { LongPollingService } from '@app/common/long-polling/long-polling.service';
+import { SlackService } from './notification-providers/Slack.service';
+import { SmsService } from './notification-providers/Sms.service';
 
 describe('NotificationServiceService', () => {
   let service: NotificationServiceService;
   let notificationRepository: Repository<Notification>;
   let emailService: EmailService;
   let webHookService: WebHookService;
+  let slackService: SlackService;
+  let smsService: SmsService;
+
 
   const mockNotificationRepository = {
     create: jest.fn(),
@@ -59,6 +64,18 @@ describe('NotificationServiceService', () => {
           provide: LongPollingService,
           useValue: mockLongPollingService,
         },
+        {
+          provide: SlackService,
+          useValue: {
+            sendMessageToEmail: jest.fn(),
+          },
+        },
+        {
+          provide: SmsService,
+          useValue: {
+            sendSms: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -68,6 +85,8 @@ describe('NotificationServiceService', () => {
     );
     emailService = module.get<EmailService>(EmailService);
     webHookService = module.get<WebHookService>(WebHookService);
+    slackService = module.get<SlackService>(SlackService);
+    smsService = module.get<SmsService>(SmsService);
   });
 
   afterEach(() => {

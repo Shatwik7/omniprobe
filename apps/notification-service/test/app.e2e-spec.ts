@@ -21,6 +21,15 @@ import { IncidentTriggeredEvent } from '@app/kafka-topics/dtos/IncidentTriggered
 @Module({})
 class MockDatabaseModule {}
 
+jest.mock('twilio', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    messages: {
+      create: jest.fn(async () => ({ sid: 'mock-sms-id' })),
+    },
+  })),
+}));
+
 jest.mock('kafkajs', () => {
   const events = {
     CONNECT: 'connect',
