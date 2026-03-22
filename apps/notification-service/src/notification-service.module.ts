@@ -8,6 +8,7 @@ import { EmailService } from './notification-providers/Email.service';
 import { RateLimiterModule } from 'nestjs-rate-limiter';
 import { WebHookService } from './notification-providers/WebHook.service';
 import { LongPollingModule } from '@app/common/long-polling/long-polling.module';
+import { SlackService } from './notification-providers/Slack.service';
 
 @Module({
   imports: [
@@ -28,6 +29,6 @@ import { LongPollingModule } from '@app/common/long-polling/long-polling.module'
     })
   ],
   controllers: [NotificationServiceController],
-  providers: [NotificationServiceService, EmailService, WebHookService],
+  providers: [NotificationServiceService, EmailService, WebHookService, SlackService],
 })
 export class NotificationServiceModule { }

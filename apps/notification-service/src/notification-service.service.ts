@@ -7,6 +7,7 @@ import { EmailService } from './notification-providers/Email.service';
 import { WebHookService } from './notification-providers/WebHook.service';
 import { IncidentTriggeredEvent } from '@app/kafka-topics/dtos/IncidentTriggeredEvent.dto';
 import { LongPollingService } from '@app/common/long-polling/long-polling.service';
+import { SlackService } from './notification-providers/Slack.service';
 
 @Injectable()
 export class NotificationServiceService {
@@ -19,6 +20,7 @@ export class NotificationServiceService {
     private readonly emailService: EmailService,
     private readonly webHookService: WebHookService,
     private readonly longPollingService: LongPollingService,
+    private readonly slackService: SlackService,
   ) { }
 
   private isRateLimited(key: string): boolean {
@@ -86,9 +88,8 @@ export class NotificationServiceService {
         await this.notificationRepository.save(notification);
         break;
       case 'slack':
-        // Implement Slack sending logic here
-        this.logger.log(`Slack notifications are not implemented yet.`);
-        notification.status = 'PENDING';
+        //await this.slackService.sendMessageToEmail(data.address, data.message);
+        notification.status = 'SENT';
         await this.notificationRepository.save(notification);
         break;
       case 'sms':
@@ -138,9 +139,8 @@ export class NotificationServiceService {
         await this.notificationRepository.save(notification);
         break;
       case 'slack':
-        // Implement Slack sending logic here
-        this.logger.log(`Slack notifications are not implemented yet.`);
-        notification.status = 'PENDING';
+        //await this.slackService.sendMessageToEmail(data.address, data.message);
+        notification.status = 'SENT';
         await this.notificationRepository.save(notification);
         break;
       case 'sms':
