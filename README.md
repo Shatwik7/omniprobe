@@ -11,13 +11,6 @@ Omniprobe is a high-performance, multi-regional observability platform designed 
 - **Multi‑Regional Deployment** – Run identical probe stacks in different zones; data is federated through Kafka topics and global API layers.
 - **Modular, Microservices Architecture** – Each component is a standalone NestJS application; add new services, probes, or storage plugins without touching others.
 
-🏆 **Achievements**
-
-- Deployed in multiple public‑cloud regions with active fail‑over.
-- Maintains **> 99.9 % uptime** across all monitored endpoints in production.
-- Processes **millions of events per day** with average ingestion latency under 500 ms.
-- Automated anomaly detection cut mean time to resolution (MTTR) by **45 %**.
-- Shared libraries (`libs/common`, `libs/database`, `libs/kafka-topics`) are reused by other internal projects.
 
 🧱 **Tech Stack**
 
@@ -157,37 +150,19 @@ npm run seed:db -- --keep-existing
 
 Use the built‑in `build` script or individual `build.js` helpers:
 ```bash
-npm run build      # compile all apps
-npm run dockerize:management-api  # example for one service
+npm run docker:depoly # docker compose deploy 
 ```
 Each service includes a `Dockerfile` for container image creation.
 Deploy with Docker Compose, Kubernetes, or your preferred orchestrator. Environment variables configure region, database, Kafka brokers, etc.
 
 ---
 
-### 🤝 Contributing
-
-We welcome contributions from the community!
-
-1. Fork the repository and create a feature branch.
-2. Ensure your changes are scoped to one service or library.
-3. Write tests (unit/e2e) covering new functionality or bug fixes.
-4. Run the linter and format code:
-   ```bash
-   npm run lint && npm run format
-   ```
-5. Submit a pull request with a clear description and link to any related issue.
-
-See `.gitlab-ci.yml` for the automated pipeline: install, unit tests (with Docker), and e2e tests.
-
----
-
 ### 📚 Documentation & Support
 
-- API documentation via Swagger `/api/doc`.
+- API documentation via Swagger once stating the server `http://localhost:3000/api/doc`.
 - Design notes and contracts under `docs/`.
 - Kafka topic definitions in `libs/kafka-topics/README.MD`.
-- Jest reports available in `reports/`.
+- Jest reports available in after exeuting test cmds `reports/`.
 
 For questions or support, open an issue or use internal chat channels.
 

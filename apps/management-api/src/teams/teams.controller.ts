@@ -73,4 +73,13 @@ export class TeamsController {
   ) {
     return this.teamsService.remove(id, req.user.id);
   }
+
+
+  @Post("join/:id")
+  @UseGuards(JwtAuthGuard)
+  join(@Param('id', ParseUUIDPipe) id: string, @Request() req: { user: { id: string } }) {
+    // TODO : add the user to the team using TEAM JOINING CODE.
+    // TODO : create new attribute in team entity for storing the team joining code.
+
+  }
 }
