@@ -82,6 +82,15 @@
         "tsConfigPath": "apps/scheduler-service/tsconfig.app.json"
       }
     },
+    "telemetry-ingest-service": {
+      "type": "application",
+      "root": "apps/telemetry-ingest-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/telemetry-ingest-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/telemetry-ingest-service/tsconfig.app.json"
+      }
+    },
     "worker-service": {
       "type": "application",
       "root": "apps/worker-service",
